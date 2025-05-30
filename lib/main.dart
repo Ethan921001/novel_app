@@ -86,6 +86,12 @@ class BookListScreen extends StatelessWidget {
             },
             child: Card(
               child: ListTile(
+                leading: Image.asset(
+                  book.image,
+                  width: 50,
+                  height: 70,
+                  fit: BoxFit.cover,
+                ),
                 title: Text(book.title),
                 subtitle: Text("作者: ${book.author}"),
               ),
@@ -96,6 +102,7 @@ class BookListScreen extends StatelessWidget {
     );
   }
 }
+
 
 
 class FrontPage extends StatelessWidget {
@@ -179,6 +186,14 @@ class _SearchPageState extends State<SearchPage> {
                     child: ListTile(
                       title: Text(book.title),
                       subtitle: Text('作者: ${book.author}'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BookDetailScreen(book: book),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },
@@ -202,10 +217,10 @@ class BookCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
-        leading: Image.asset('assets/images/book.png', width: 40),
+        leading: Image.asset('assets/images/book0.jpg', width: 40),
         title: Text(book.title),
         subtitle: Text(
-          "${book.author}\n${book.chapter}\n${book.date}",
+          "${book.author}\n${book.date}",
           style: TextStyle(fontSize: 12),
         ),
         trailing: Column(
