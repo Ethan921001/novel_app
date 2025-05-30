@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'readPage.dart';
 import 'book_data.dart';
 import 'book.dart';
 
@@ -66,20 +67,36 @@ final TextEditingController _searchController = TextEditingController();
 
 
 class BookListScreen extends StatelessWidget {
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("分類")),
+      appBar: AppBar(title: Text("書籍分類")),
       body: ListView.builder(
         itemCount: books.length,
         itemBuilder: (context, index) {
-          return BookCard(book: books[index]);
+          final book = books[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BookDetailScreen(book: book),
+                ),
+              );
+            },
+            child: Card(
+              child: ListTile(
+                title: Text(book.title),
+                subtitle: Text("作者: ${book.author}"),
+              ),
+            ),
+          );
         },
       ),
     );
   }
 }
+
 
 class FrontPage extends StatelessWidget {
 
