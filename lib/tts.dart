@@ -5,12 +5,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
-void main() => runApp(MyApp());
+// void main() => runApp(MyApp());
 
-class MyApp extends StatefulWidget {
-  @override
-  _MyAppState createState() => _MyAppState();
-}
+// class MyApp extends StatefulWidget {
+//   @override
+//   _MyAppState createState() => _MyAppState();
+// }
 
 enum TtsState { playing, stopped, paused, continued }
 
