@@ -1,11 +1,13 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_tts/flutter_tts.dart';
 
-void main() => runApp(NovelReader());
-
 class NovelReader extends StatefulWidget {
+  final String basePath; // e.g., "assets/novel1"
+  final int initialChapter;
+
+  const NovelReader({super.key, required this.basePath, this.initialChapter = 1});
+
   @override
   _NovelReaderState createState() => _NovelReaderState();
 }
@@ -18,6 +20,8 @@ class _NovelReaderState extends State<NovelReader> {
   List<String> sentences = [];
   int currentIndex = 0;
   bool isSpeaking = false;
+  int currentChapter = 1;
+  int maxChapter = 20;
 
   double volume = 0.5;
   double pitch = 1.0;
@@ -27,37 +31,23 @@ class _NovelReaderState extends State<NovelReader> {
 
   final List<Map<String, String>> languages = [
     {'label': '中文（普通話）', 'value': 'zh-CN'},
-    {'label': '粵語（廣東話）', 'value': 'yue-HK'}, // 若不支援 yue-HK，可改 zh-HK
+    {'label': '粵語（廣東話）', 'value': 'yue-HK'},
   ];
-
-  final String novelContent = '''
-第一章：蒼雲古城。
-
-在遙遠的東方，有一座名為蒼雲的古老山城。
-晨曦照耀下的青石板路，藏著無數故事的回聲。
-少年扶劍而行，尋找失落已久的真相。
-他名為風凌，一位孤兒，卻天資卓絕。
-當年一場大火奪去了他所有的記憶，也燃起了他尋根的決心。
-''';
 
   @override
   void initState() {
     super.initState();
+    selectedLanguage = 'zh-CN';
     initTts();
-    splitTextIntoSentences(novelContent);
-  }
-
-  void splitTextIntoSentences(String text) {
-    final pattern = RegExp(r'(?<=[。！？\n])'); // 中文標點分句
-    sentences = text.split(pattern).where((s) => s.trim().isNotEmpty).toList();
+    loadChapter(currentChapter);
   }
 
   Future<void> initTts() async {
     flutterTts = FlutterTts();
-
     await flutterTts.setVolume(volume);
     await flutterTts.setSpeechRate(rate);
     await flutterTts.setPitch(pitch);
+    await flutterTts.setLanguage(selectedLanguage);
     await flutterTts.awaitSpeakCompletion(true);
 
     flutterTts.setCompletionHandler(() async {
@@ -74,13 +64,32 @@ class _NovelReaderState extends State<NovelReader> {
         });
       }
     });
+  }
 
-    flutterTts.setErrorHandler((msg) {
-      print("TTS error: $msg");
-      setState(() {
-        isSpeaking = false;
-      });
+
+
+  Future<void> loadChapter(int chapter) async {
+    setState(() {
+      isSpeaking = true;
+      currentIndex = 0;
     });
+    await stopSpeaking(); // 停止語音
+
+    try {
+      final path = '${widget.basePath}/chapter$chapter.txt';
+      final text = await rootBundle.loadString(path);
+      final pattern = RegExp(r'(?<=[。！？\n])');
+      setState(() {
+        sentences = text.split(pattern).where((s) => s.trim().isNotEmpty).toList();
+        currentChapter = chapter;
+        currentIndex = 0;
+      });
+      await startSpeaking(); // 從新章節頭朗讀
+    } catch (e) {
+      setState(() {
+        sentences = ['無法載入第 $chapter 章。'];
+      });
+    }
   }
 
   Future<void> scrollToCurrent() async {
@@ -129,37 +138,47 @@ class _NovelReaderState extends State<NovelReader> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: Text("小說朗讀（自動滾動）")),
-        body: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: EdgeInsets.all(16),
-                itemCount: sentences.length,
-                itemBuilder: (context, index) {
-                  final isActive = index == currentIndex;
-                  return Container(
-                    padding: EdgeInsets.symmetric(vertical: 10),
-                    child: Text(
-                      sentences[index],
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: isActive ? Colors.blue : Colors.black87,
-                        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                      ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("小說朗讀：第$currentChapter章"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: currentChapter > 1 ? () => loadChapter(currentChapter - 1) : null,
+          ),
+          IconButton(
+            icon: Icon(Icons.arrow_forward),
+            onPressed: () => loadChapter(currentChapter + 1),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: EdgeInsets.all(16),
+              itemCount: sentences.length,
+              itemBuilder: (context, index) {
+                final isActive = index == currentIndex;
+                return Container(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Text(
+                    sentences[index],
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: isActive ? Colors.blue : Colors.black87,
+                      fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
-            _buildLanguageSelector(),
-            _buildControlButtons(),
-            _buildSliders(),
-          ],
-        ),
+          ),
+          _buildLanguageSelector(),
+          _buildControlButtons(),
+          _buildSliders(),
+        ],
       ),
     );
   }
@@ -244,14 +263,18 @@ class _NovelReaderState extends State<NovelReader> {
                 child: Text(lang['label']!),
               );
             }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  selectedLanguage = value;
-                });
-                flutterTts.setLanguage(selectedLanguage);
+              onChanged: (value) async {
+                if (value != null) {
+                  await stopSpeaking();
+                  setState(() {
+                    selectedLanguage = value;
+                  });
+                  await flutterTts.setLanguage(selectedLanguage);
+                  // currentIndex = 0;
+                  // await speakCurrent();
+                  await loadChapter(currentChapter);
+                }
               }
-            },
           ),
         ],
       ),

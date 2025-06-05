@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:novel_app/tts.dart';
 import 'book.dart';
 import 'book_data.dart';
 
@@ -127,6 +128,25 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                             }
                           },
                         ),
+                        ElevatedButton(
+                          onPressed: () async {
+                                // 預設從第1章朗讀
+                                String chapterText = await _loadChapterContent(1);
+                                final lines = chapterText.split('\n');
+                                final title = lines.isNotEmpty ? lines.first.trim() : '第一章';
+                                final body = lines.length > 1 ? lines.sublist(1).join('\n') : '';
+
+                                Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                builder: (context) => NovelReader(
+                                  basePath: widget.book.content
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text('進入聽書模式'),
+                        )
                       ],
                     ),
                   );
