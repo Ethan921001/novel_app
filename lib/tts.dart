@@ -1,382 +1,283 @@
-import 'dart:async';
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_tts/flutter_tts.dart';
 
-// void main() => runApp(MyApp());
+class NovelReader extends StatefulWidget {
+  final String basePath; // e.g., "assets/novel1"
+  final int initialChapter;
 
-// class MyApp extends StatefulWidget {
-//   @override
-//   _MyAppState createState() => _MyAppState();
-// }
+  const NovelReader({super.key, required this.basePath, this.initialChapter = 1});
 
-enum TtsState { playing, stopped, paused, continued }
+  @override
+  _NovelReaderState createState() => _NovelReaderState();
+}
 
-class _MyAppState extends State<MyApp> {
+class _NovelReaderState extends State<NovelReader> {
   late FlutterTts flutterTts;
-  String? language;
-  String? engine;
+  final ScrollController _scrollController = ScrollController();
+  final Duration scrollDuration = Duration(milliseconds: 600);
+
+  List<String> sentences = [];
+  int currentIndex = 0;
+  bool isSpeaking = false;
+  int currentChapter = 1;
+  int maxChapter = 20;
+
   double volume = 0.5;
   double pitch = 1.0;
   double rate = 0.5;
-  bool isCurrentLanguageInstalled = false;
 
-  String? _newVoiceText;
-  int? _inputLength;
+  String selectedLanguage = 'zh-CN';
 
-  TtsState ttsState = TtsState.stopped;
-
-  bool get isPlaying => ttsState == TtsState.playing;
-  bool get isStopped => ttsState == TtsState.stopped;
-  bool get isPaused => ttsState == TtsState.paused;
-  bool get isContinued => ttsState == TtsState.continued;
-
-  bool get isIOS => !kIsWeb && Platform.isIOS;
-  bool get isAndroid => !kIsWeb && Platform.isAndroid;
-  bool get isWindows => !kIsWeb && Platform.isWindows;
-  bool get isWeb => kIsWeb;
+  final List<Map<String, String>> languages = [
+    {'label': '中文（普通話）', 'value': 'zh-CN'},
+    {'label': '粵語（廣東話）', 'value': 'yue-HK'},
+  ];
 
   @override
-  initState() {
+  void initState() {
     super.initState();
+    selectedLanguage = 'zh-CN';
     initTts();
+    loadChapter(currentChapter);
   }
 
-  dynamic initTts() {
+  Future<void> initTts() async {
     flutterTts = FlutterTts();
-
-    _setAwaitOptions();
-
-    if (isAndroid) {
-      _getDefaultEngine();
-      _getDefaultVoice();
-    }
-
-    flutterTts.setStartHandler(() {
-      setState(() {
-        print("Playing");
-        ttsState = TtsState.playing;
-      });
-    });
-
-    flutterTts.setCompletionHandler(() {
-      setState(() {
-        print("Complete");
-        ttsState = TtsState.stopped;
-      });
-    });
-
-    flutterTts.setCancelHandler(() {
-      setState(() {
-        print("Cancel");
-        ttsState = TtsState.stopped;
-      });
-    });
-
-    flutterTts.setPauseHandler(() {
-      setState(() {
-        print("Paused");
-        ttsState = TtsState.paused;
-      });
-    });
-
-    flutterTts.setContinueHandler(() {
-      setState(() {
-        print("Continued");
-        ttsState = TtsState.continued;
-      });
-    });
-
-    flutterTts.setErrorHandler((msg) {
-      setState(() {
-        print("error: $msg");
-        ttsState = TtsState.stopped;
-      });
-    });
-  }
-
-  Future<dynamic> _getLanguages() async => await flutterTts.getLanguages;
-
-  Future<dynamic> _getEngines() async => await flutterTts.getEngines;
-
-  Future<void> _getDefaultEngine() async {
-    var engine = await flutterTts.getDefaultEngine;
-    if (engine != null) {
-      print(engine);
-    }
-  }
-
-  Future<void> _getDefaultVoice() async {
-    var voice = await flutterTts.getDefaultVoice;
-    if (voice != null) {
-      print(voice);
-    }
-  }
-
-  Future<void> _speak() async {
     await flutterTts.setVolume(volume);
     await flutterTts.setSpeechRate(rate);
     await flutterTts.setPitch(pitch);
+    await flutterTts.setLanguage(selectedLanguage);
+    await flutterTts.awaitSpeakCompletion(true);
 
-    if (_newVoiceText != null) {
-      if (_newVoiceText!.isNotEmpty) {
-        await flutterTts.speak(_newVoiceText!);
+    flutterTts.setCompletionHandler(() async {
+      if (!mounted) return;
+      if (isSpeaking && currentIndex < sentences.length - 1) {
+        setState(() {
+          currentIndex++;
+        });
+        await scrollToCurrent();
+        await speakCurrent();
+      } else {
+        setState(() {
+          isSpeaking = false;
+        });
       }
+    });
+  }
+
+
+
+  Future<void> loadChapter(int chapter) async {
+    setState(() {
+      isSpeaking = true;
+      currentIndex = 0;
+    });
+    await stopSpeaking(); // 停止語音
+
+    try {
+      final path = '${widget.basePath}/chapter$chapter.txt';
+      final text = await rootBundle.loadString(path);
+      final pattern = RegExp(r'(?<=[。！？\n])');
+      setState(() {
+        sentences = text.split(pattern).where((s) => s.trim().isNotEmpty).toList();
+        currentChapter = chapter;
+        currentIndex = 0;
+      });
+      await startSpeaking(); // 從新章節頭朗讀
+    } catch (e) {
+      setState(() {
+        sentences = ['無法載入第 $chapter 章。'];
+      });
     }
   }
 
-  Future<void> _setAwaitOptions() async {
-    await flutterTts.awaitSpeakCompletion(true);
+  Future<void> scrollToCurrent() async {
+    final position = currentIndex * 70.0;
+    await _scrollController.animateTo(
+      position,
+      duration: scrollDuration,
+      curve: Curves.easeInOut,
+    );
   }
 
-  Future<void> _stop() async {
-    var result = await flutterTts.stop();
-    if (result == 1) setState(() => ttsState = TtsState.stopped);
+  Future<void> speakCurrent() async {
+    await flutterTts.speak(sentences[currentIndex]);
   }
 
-  Future<void> _pause() async {
-    var result = await flutterTts.pause();
-    if (result == 1) setState(() => ttsState = TtsState.paused);
+  Future<void> startSpeaking() async {
+    if (sentences.isEmpty) return;
+    setState(() {
+      currentIndex = 0;
+      isSpeaking = true;
+    });
+    await scrollToCurrent();
+    await speakCurrent();
+  }
+
+  Future<void> stopSpeaking() async {
+    await flutterTts.stop();
+    setState(() {
+      isSpeaking = false;
+    });
+  }
+
+  Future<void> pauseSpeaking() async {
+    await flutterTts.pause();
+    setState(() {
+      isSpeaking = false;
+    });
   }
 
   @override
   void dispose() {
-    super.dispose();
     flutterTts.stop();
-  }
-
-  List<DropdownMenuItem<String>> getEnginesDropDownMenuItems(
-      List<dynamic> engines) {
-    var items = <DropdownMenuItem<String>>[];
-    for (dynamic type in engines) {
-      items.add(DropdownMenuItem(
-          value: type as String?, child: Text((type as String))));
-    }
-    return items;
-  }
-
-  void changedEnginesDropDownItem(String? selectedEngine) async {
-    await flutterTts.setEngine(selectedEngine!);
-    language = null;
-    setState(() {
-      engine = selectedEngine;
-    });
-  }
-
-  List<DropdownMenuItem<String>> getLanguageDropDownMenuItems(
-      List<dynamic> languages) {
-    var items = <DropdownMenuItem<String>>[];
-    for (dynamic type in languages) {
-      items.add(DropdownMenuItem(
-          value: type as String?, child: Text((type as String))));
-    }
-    return items;
-  }
-
-  void changedLanguageDropDownItem(String? selectedType) {
-    setState(() {
-      language = selectedType;
-      flutterTts.setLanguage(language!);
-      if (isAndroid) {
-        flutterTts
-            .isLanguageInstalled(language!)
-            .then((value) => isCurrentLanguageInstalled = (value as bool));
-      }
-    });
-  }
-
-  void _onChange(String text) {
-    setState(() {
-      _newVoiceText = text;
-    });
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text('Flutter TTS'),
-        ),
-        body: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: Column(
-            children: [
-              _inputSection(),
-              _btnSection(),
-              _engineSection(),
-              _futureBuilder(),
-              _buildSliders(),
-              if (isAndroid) _getMaxSpeechInputLengthSection(),
-            ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("小說朗讀：第$currentChapter章"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: currentChapter > 1 ? () => loadChapter(currentChapter - 1) : null,
           ),
-        ),
+          IconButton(
+            icon: Icon(Icons.arrow_forward),
+            onPressed: () => loadChapter(currentChapter + 1),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _engineSection() {
-    if (isAndroid) {
-      return FutureBuilder<dynamic>(
-          future: _getEngines(),
-          builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
-            if (snapshot.hasData) {
-              return _enginesDropDownSection(snapshot.data as List<dynamic>);
-            } else if (snapshot.hasError) {
-              return Text('Error loading engines...');
-            } else {
-              return Text('Loading engines...');
-            }
-          });
-    } else {
-      return Container(width: 0, height: 0);
-    }
-  }
-
-  Widget _futureBuilder() => FutureBuilder<dynamic>(
-      future: _getLanguages(),
-      builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
-        if (snapshot.hasData) {
-          return _languageDropDownSection(snapshot.data as List<dynamic>);
-        } else if (snapshot.hasError) {
-          return Text('Error loading languages...');
-        } else
-          return Text('Loading Languages...');
-      });
-
-  Widget _inputSection() => Container(
-      alignment: Alignment.topCenter,
-      padding: EdgeInsets.only(top: 25.0, left: 25.0, right: 25.0),
-      child: TextField(
-        maxLines: 11,
-        minLines: 6,
-        onChanged: (String value) {
-          _onChange(value);
-        },
-      ));
-
-  Widget _btnSection() {
-    return Container(
-      padding: EdgeInsets.only(top: 50.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      body: Column(
         children: [
-          _buildButtonColumn(Colors.green, Colors.greenAccent, Icons.play_arrow,
-              'PLAY', _speak),
-          _buildButtonColumn(
-              Colors.red, Colors.redAccent, Icons.stop, 'STOP', _stop),
-          _buildButtonColumn(
-              Colors.blue, Colors.blueAccent, Icons.pause, 'PAUSE', _pause),
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: EdgeInsets.all(16),
+              itemCount: sentences.length,
+              itemBuilder: (context, index) {
+                final isActive = index == currentIndex;
+                return Container(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Text(
+                    sentences[index],
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: isActive ? Colors.blue : Colors.black87,
+                      fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          _buildLanguageSelector(),
+          _buildControlButtons(),
+          _buildSliders(),
         ],
       ),
     );
   }
 
-  Widget _enginesDropDownSection(List<dynamic> engines) => Container(
-    padding: EdgeInsets.only(top: 50.0),
-    child: DropdownButton(
-      value: engine,
-      items: getEnginesDropDownMenuItems(engines),
-      onChanged: changedEnginesDropDownItem,
-    ),
-  );
-
-  Widget _languageDropDownSection(List<dynamic> languages) => Container(
-      padding: EdgeInsets.only(top: 10.0),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        DropdownButton(
-          value: language,
-          items: getLanguageDropDownMenuItems(languages),
-          onChanged: changedLanguageDropDownItem,
-        ),
-        Visibility(
-          visible: isAndroid,
-          child: Text("Is installed: $isCurrentLanguageInstalled"),
-        ),
-      ]));
-
-  Column _buildButtonColumn(Color color, Color splashColor, IconData icon,
-      String label, Function func) {
-    return Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildControlButtons() {
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          IconButton(
-              icon: Icon(icon),
-              color: color,
-              splashColor: splashColor,
-              onPressed: () => func()),
-          Container(
-              margin: const EdgeInsets.only(top: 8.0),
-              child: Text(label,
-                  style: TextStyle(
-                      fontSize: 12.0,
-                      fontWeight: FontWeight.w400,
-                      color: color)))
-        ]);
+          _iconButton(Icons.play_arrow, "播放", Colors.green, startSpeaking),
+          _iconButton(Icons.pause, "暫停", Colors.orange, pauseSpeaking),
+          _iconButton(Icons.stop, "停止", Colors.red, stopSpeaking),
+        ],
+      ),
+    );
   }
 
-  Widget _getMaxSpeechInputLengthSection() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  Widget _iconButton(IconData icon, String label, Color color, Function func) {
+    return Column(
       children: [
-        ElevatedButton(
-          child: Text('Get max speech input length'),
-          onPressed: () async {
-            _inputLength = await flutterTts.getMaxSpeechInputLength;
-            setState(() {});
-          },
+        IconButton(
+          icon: Icon(icon),
+          color: color,
+          iconSize: 32,
+          onPressed: () => func(),
         ),
-        Text("$_inputLength characters"),
+        Text(label),
       ],
     );
   }
 
   Widget _buildSliders() {
     return Column(
-      children: [_volume(), _pitch(), _rate()],
+      children: [
+        Slider(
+          value: volume,
+          onChanged: (val) {
+            setState(() => volume = val);
+            flutterTts.setVolume(val);
+          },
+          min: 0.0,
+          max: 1.0,
+          label: "音量: ${volume.toStringAsFixed(1)}",
+        ),
+        Slider(
+          value: pitch,
+          onChanged: (val) {
+            setState(() => pitch = val);
+            flutterTts.setPitch(val);
+          },
+          min: 0.5,
+          max: 2.0,
+          label: "音調: ${pitch.toStringAsFixed(1)}",
+        ),
+        Slider(
+          value: rate,
+          onChanged: (val) {
+            setState(() => rate = val);
+            flutterTts.setSpeechRate(val);
+          },
+          min: 0.0,
+          max: 1.0,
+          label: "語速: ${rate.toStringAsFixed(1)}",
+        ),
+      ],
     );
   }
 
-  Widget _volume() {
-    return Slider(
-        value: volume,
-        onChanged: (newVolume) {
-          setState(() => volume = newVolume);
-        },
-        min: 0.0,
-        max: 1.0,
-        divisions: 10,
-        label: "Volume: ${volume.toStringAsFixed(1)}");
-  }
-
-  Widget _pitch() {
-    return Slider(
-      value: pitch,
-      onChanged: (newPitch) {
-        setState(() => pitch = newPitch);
-      },
-      min: 0.5,
-      max: 2.0,
-      divisions: 15,
-      label: "Pitch: ${pitch.toStringAsFixed(1)}",
-      activeColor: Colors.red,
-    );
-  }
-
-  Widget _rate() {
-    return Slider(
-      value: rate,
-      onChanged: (newRate) {
-        setState(() => rate = newRate);
-      },
-      min: 0.0,
-      max: 1.0,
-      divisions: 10,
-      label: "Rate: ${rate.toStringAsFixed(1)}",
-      activeColor: Colors.green,
+  Widget _buildLanguageSelector() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text("語言："),
+          DropdownButton<String>(
+            value: selectedLanguage,
+            items: languages.map((lang) {
+              return DropdownMenuItem<String>(
+                value: lang['value'],
+                child: Text(lang['label']!),
+              );
+            }).toList(),
+              onChanged: (value) async {
+                if (value != null) {
+                  await stopSpeaking();
+                  setState(() {
+                    selectedLanguage = value;
+                  });
+                  await flutterTts.setLanguage(selectedLanguage);
+                  // currentIndex = 0;
+                  // await speakCurrent();
+                  await loadChapter(currentChapter);
+                }
+              }
+          ),
+        ],
+      ),
     );
   }
 }

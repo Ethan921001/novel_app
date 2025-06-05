@@ -67,6 +67,7 @@ flutter:
     - assets/books/book0/chapter1.txt
     - assets/books/book0/chapter2.txt
     - assets/books/book0/chapter3.txt
+    - assets/books/book0/chapter4.txt
     - assets/books/book1/chapter1.txt
     - assets/books/book2/chapter1.txt
     - assets/books/book3/chapter1.txt
