@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_tts/flutter_tts.dart';
 
+void main() => runApp(NovelReader(basePath: "assets/books/book0"));
+
 class NovelReader extends StatefulWidget {
   final String basePath; // e.g., "assets/novel1"
   final int initialChapter;
@@ -69,6 +71,7 @@ class _NovelReaderState extends State<NovelReader> {
 
 
   Future<void> loadChapter(int chapter) async {
+    print("載入章節");
     setState(() {
       isSpeaking = true;
       currentIndex = 0;
@@ -113,6 +116,7 @@ class _NovelReaderState extends State<NovelReader> {
     });
     await scrollToCurrent();
     await speakCurrent();
+    print("開始播放");
   }
 
   Future<void> stopSpeaking() async {
