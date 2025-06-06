@@ -171,7 +171,9 @@ class _NovelReaderState extends State<NovelReader> {
                     sentences[index],
                     style: TextStyle(
                       fontSize: 18,
-                      color: isActive ? Colors.blue : Colors.black87,
+                      color: isActive
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).textTheme.bodyLarge?.color,
                       fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
@@ -182,6 +184,7 @@ class _NovelReaderState extends State<NovelReader> {
           _buildLanguageSelector(),
           _buildControlButtons(),
           _buildSliders(),
+          // _buildTestTtsButton(),
         ],
       ),
     );
@@ -251,6 +254,22 @@ class _NovelReaderState extends State<NovelReader> {
       ],
     );
   }
+
+  Widget _buildTestTtsButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: ElevatedButton.icon(
+        icon: Icon(Icons.record_voice_over),
+        label: Text("測試 TTS 發聲"),
+        onPressed: () async {
+          await stopSpeaking(); // 停止目前播放
+          final result = await flutterTts.speak("這是一段語音測試。Hello, this is a TTS test.");
+          print("TTS 播放結果: $result");
+        },
+      ),
+    );
+  }
+
 
   Widget _buildLanguageSelector() {
     return Padding(
