@@ -1,17 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'readPage.dart';
 import 'book_data.dart';
 import 'book.dart';
+import 'account.dart';
+import 'user.dart';
+import 'bookshelf.dart';
 
-void main() => runApp(BookListApp());
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
+void main() {
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => UserProvider()..tryAutoLogin(),
+      child: BookListApp(),
+    ),
+  );
+}
 
 class BookListApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '分類',
-      theme: ThemeData(primarySwatch: Colors.amber),
-      home: MainNavigation(),
+    return ValueListenableBuilder<ThemeMode>(
+        valueListenable: themeNotifier,
+        builder: (context, mode, _) {
+          return MaterialApp(
+            title: 'Novel App',
+            theme: ThemeData.light(),
+            darkTheme: ThemeData.dark(),
+            themeMode: mode,
+            home: MainNavigation(),
+          );
+        },
     );
   }
 }
@@ -28,8 +47,8 @@ class _MainNavigationState extends State<MainNavigation> {
     FrontPage(), // 首頁
     BookListScreen(), // 分類頁
     SearchPage(),
-    Center(child: Text("書架內容")),
-    Center(child: Text("我的頁面")),
+    UserBookshelfWidget(),
+    LoginRegisterWidget(),
   ];
 
   void _onItemTapped(int index) {
@@ -185,6 +204,12 @@ class _SearchPageState extends State<SearchPage> {
                   return Card(
                     child: ListTile(
                       title: Text(book.title),
+                      leading: Image.asset(
+                        book.image,
+                        width: 50,
+                        height: 70,
+                        fit: BoxFit.cover,
+                      ),
                       subtitle: Text('作者: ${book.author}'),
                       onTap: () {
                         Navigator.push(
