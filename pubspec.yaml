@@ -40,9 +40,17 @@ dependencies:
   provider: ^6.1.5
   shared_preferences: ^2.3.3
   flutter_stable_diffusion: ^1.0.0+2
-  dio: ^5.8.0+1
+#  dio: ^5.8.0+1
+  dio : ^4.0.6
   http: ^1.4.0
   stability_image_generation: ^0.0.4
+#  chat_gpt_sdk: ^1.0.0
+#  velocity_x: ^2.1.0
+#  dash_chat: ^1.1.16
+  flutter_dotenv: ^5.2.1
+  flutter_markdown: ^0.6.15
+  intl: ^0.18.1
+
 
 dev_dependencies:
   flutter_test:
