@@ -3,25 +3,24 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class User {
+  // test account: qqq
+  // test password: 123
   final String id;
   final String name;
   List<String> favorites;
-  Map<String, List<String>> comments;
 
   User({
     required this.id,
     required this.name,
     List<String>? favorites,
     Map<String, List<String>>? comments,
-  })  : favorites = favorites ?? [],
-        comments = comments ?? {};
+  })  : favorites = favorites ?? [];
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
       'favorites': favorites,
-      'comments': comments,
     };
   }
 
@@ -30,16 +29,17 @@ class User {
       id: json['id'],
       name: json['name'],
       favorites: List<String>.from(json['favorites'] ?? []),
-      comments: Map<String, List<String>>.from((json['comments'] ?? {}).map(
-            (key, value) => MapEntry(key, List<String>.from(value)),
-      )),
+      comments: Map<String, List<String>>.from(
+        (json['comments'] ?? {}).map(
+              (key, value) => MapEntry(key, List<String>.from(value)),
+        ),
+      ),
     );
   }
 }
 
 class UserProvider with ChangeNotifier {
   User? currentUser;
-  final Map<String, List<Map<String, dynamic>>> _bookComments = {};
 
   Future<void> login(User user) async {
     currentUser = user;
@@ -48,11 +48,13 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
+    if (currentUser != null) {
+      await updateUserInDatabase();
+    }
     currentUser = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('userData');
     notifyListeners();
   }
+
 
   Future<void> tryAutoLogin() async {
     final prefs = await SharedPreferences.getInstance();
@@ -70,7 +72,31 @@ class UserProvider with ChangeNotifier {
     await prefs.setString('userData', jsonString);
   }
 
-  void toggleFavorite(String bookId) {
+  Future<void> updateUserInDatabase() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawData = prefs.getString('userDatabase');
+    if (rawData == null || currentUser == null) return;
+
+    final userDatabase = jsonDecode(rawData) as Map<String, dynamic>;
+
+    final currentUserJson = currentUser!.toJson();
+    final existingEntry = userDatabase[currentUser!.id] ?? {};
+
+    // 保留原本的 password
+    final password = existingEntry['password'] ?? '';
+
+    userDatabase[currentUser!.id] = {
+      'password': password,
+      'name': currentUserJson['name'],
+      'favorites': currentUserJson['favorites'],
+      'comments': currentUserJson['comments'],
+    };
+
+    await prefs.setString('userDatabase', jsonEncode(userDatabase));
+  }
+
+
+  void toggleFavorite(String bookId) async {
     if (currentUser == null) return;
 
     if (currentUser!.favorites.contains(bookId)) {
@@ -79,31 +105,12 @@ class UserProvider with ChangeNotifier {
       currentUser!.favorites.add(bookId);
     }
 
-    _saveUserToPrefs(currentUser!);
+    await _saveUserToPrefs(currentUser!);
+    await updateUserInDatabase();
     notifyListeners();
   }
 
-  void addComment(String bookTitle, String comment, int rating) {
-    _bookComments.putIfAbsent(bookTitle, () => []);
-    _bookComments[bookTitle]!.add({
-      'user': currentUser?.name ?? '匿名',
-      'comment': comment,
-      'rating': rating,
-    });
-    notifyListeners();
-  }
-
-  List<String> getUserFavoriteBooks(){
-    return currentUser!.favorites;
-  }
-
-  List<Map<String, dynamic>> getComments(String bookTitle) {
-    return _bookComments[bookTitle] ?? [];
-  }
-
-  double getAverageRating(String bookTitle) {
-    final comments = getComments(bookTitle);
-    if (comments.isEmpty) return 0.0;
-    return comments.map((c) => c['rating'] as int).reduce((a, b) => a + b) / comments.length;
+  List<String> getUserFavoriteBooks() {
+    return currentUser?.favorites ?? [];
   }
 }
