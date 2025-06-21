@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'user.dart';
+import 'addbook.dart';
+import 'MybooksScreen.dart';
 
 class LoginRegisterWidget extends StatefulWidget {
   const LoginRegisterWidget({Key? key}) : super(key: key);
@@ -188,8 +190,10 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text('您好，${user.name}',
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        Text(
+          '您好，${user.name}',
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 30),
         ElevatedButton(
           onPressed: () => _logout(context),
@@ -199,6 +203,25 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
           onPressed: () => _deleteAccount(context),
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
           child: const Text('刪除帳號'),
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddBookScreen()),
+            );
+          },
+          child: const Text('新增書籍'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MyBooksScreen()),
+            );
+          },
+          child: const Text('我的書籍'),
         ),
       ],
     );

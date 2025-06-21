@@ -28,37 +28,70 @@ class UserBookshelfWidget extends StatelessWidget {
       appBar: AppBar(title: const Text('我的書櫃')),
       body: favoriteBooks.isEmpty
           ? const Center(child: Text('尚未收藏任何書籍'))
-          : ListView.builder(
-        padding: const EdgeInsets.all(8),
-        itemCount: favoriteBooks.length,
-        itemBuilder: (context, index) {
-          final bookTitle = favoriteBooks[index];
-          final book = books[index];
+          : Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: GridView.builder(
+          itemCount: favoriteBooks.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 6,
+            mainAxisSpacing: 8,
+            childAspectRatio: 0.68,
+          ),
+          itemBuilder: (context, index) {
+            final bookTitle = favoriteBooks[index];
+            final book = books.firstWhere((b) => b.title == bookTitle);
 
-          return Card(
-            elevation: 4,
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListTile(
-              title: Text(
-                bookTitle,
-                style: const TextStyle(fontSize: 18),
-              ),
-              trailing: const Icon(Icons.arrow_forward_ios),
+            return GestureDetector(
               onTap: () {
-                // TODO: 替換為實際的導向邏輯
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BookDetailScreen(book: book),
+                    builder: (_) => BookDetailScreen(book: book),
                   ),
                 );
               },
-            ),
-          );
-        },
+              child: Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(color: Colors.grey.shade600, width: 1.2),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cardWidth = constraints.maxWidth - 30;
+                    return Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          Image.asset(
+                            book.image,
+                            width: cardWidth,
+                            height: cardWidth * 1.3,
+                            fit: BoxFit.cover,
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: cardWidth,
+                            child: Text(
+                              book.title,
+                              textAlign: TextAlign.center,
+                              softWrap: true,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

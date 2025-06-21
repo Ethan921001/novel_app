@@ -34,6 +34,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   Future<void> _detectChapterCount() async {
     int count = 0;
     List<String> titles = ['簡介'];
+
     while (true) {
       try {
         String path = '${widget.book.content}/chapter${count + 1}.txt';
@@ -41,38 +42,101 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
         final firstLine = content.split('\n').first.trim();
         titles.add(firstLine.isNotEmpty ? firstLine : '第 ${count + 1} 章');
         count++;
-        print(widget.book.content);
       } catch (e) {
+        // fallback：從 content 裡面偵測 #CHAPTER# 數量
+        final content = widget.book.content;
+        final chapterMatches = RegExp(r'#CHAPTER#').allMatches(content).toList();
+
+        // 如果沒有任何 chapterN.txt，但 book.content 有 #CHAPTER# 標記
+        if (count == 0 && chapterMatches.isNotEmpty) {
+          count = chapterMatches.length;
+          for (int i = 0; i < count; i++) {
+            // 試圖從每個章節擷取標題
+            final start = chapterMatches[i].start;
+            final end = (i + 1 < chapterMatches.length)
+                ? chapterMatches[i + 1].start
+                : content.length;
+            final chunk = content.substring(start, end);
+            final lines = chunk.split('\n');
+            final titleLine = lines.length > 0 ? lines[0].replaceAll('#CHAPTER#', '').trim() : '第 ${i + 1} 章';
+            titles.add(titleLine.isNotEmpty ? titleLine : '第 ${i + 1} 章');
+          }
+        }
         break;
       }
     }
+
     setState(() {
       chapterCount = count;
       chapterTitles = titles;
     });
   }
 
+
   Future<String> _loadIntro(int index) async {
     String path = '${widget.book.content}/intro.txt';
     try {
       return await rootBundle.loadString(path);
     } catch (e) {
-      return '無法讀取簡介。';
+      // fallback: 用 content 裡的 #INTRO# 內容
+      final content = widget.book.content;
+      final introStart = content.indexOf('#INTRO#');
+      if (introStart == -1) return '無法讀取簡介。';
+      final chapterStart = content.indexOf('#CHAPTER#', introStart);
+      if (chapterStart == -1) {
+        // 從 #INTRO# 後面到末尾全當簡介
+        return content.substring(introStart + 7).trim();
+      } else {
+        return content.substring(introStart + 7, chapterStart).trim();
+      }
     }
   }
 
   Future<String> _loadChapterContent(int index) async {
-    print(widget.book);
     if (index == 0) {
-      return '這是《${widget.book.title}》的簡介頁。\n\n作者：${widget.book.author}\n發布日期：${widget.book.date}\n共 $chapterCount 章。\n\n右滑以開始閱讀第一章。';
+      return '簡介\n這是《${widget.book.title}》的簡介頁。\n\n作者：${widget.book.author}\n發布日期：${widget.book.date}\n共 $chapterCount 章。\n\n右滑以開始閱讀第一章。';
     }
+
     String path = '${widget.book.content}/chapter$index.txt';
     try {
+      // 如果有 chapterN.txt，直接讀取
       return await rootBundle.loadString(path);
     } catch (e) {
-      return '無法讀取第 $index 章內容。';
+      // fallback：從 book.content 中擷取章節資料
+      final content = widget.book.content;
+
+      int findChapterStart(int i) {
+        int pos = 0;
+        for (int c = 1; c <= i; c++) {
+          final nextPos = content.indexOf('#CHAPTER#', pos + 1);
+          if (nextPos == -1) return -1;
+          pos = nextPos;
+        }
+        return pos;
+      }
+
+      final start = findChapterStart(index);
+      if (start == -1) return '第 $index 章\n無法讀取內容';
+
+      final nextStart = findChapterStart(index + 1);
+      String raw = (nextStart == -1)
+          ? content.substring(start)
+          : content.substring(start, nextStart);
+
+      raw = raw.replaceFirst('#CHAPTER#', '').trim();
+
+      // 分成多行，補上標題（第一行）與內文
+      final lines = raw.split('\n').where((l) => l.trim().isNotEmpty).toList();
+
+      if (lines.isEmpty) return '第 $index 章\n（本章無內容）';
+
+      String title = lines.first.trim();
+      String body = lines.sublist(1).join('\n');
+
+      return '$title\n$body';
     }
   }
+
 
   void _showChapterDialog() {
     showDialog(
