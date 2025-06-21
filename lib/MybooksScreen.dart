@@ -37,7 +37,7 @@ class MyBooksScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => EditBookScreen(book: book),
+                    builder: (_) => BookFormScreen(book: book),
                   ),
                 );
               },

@@ -357,6 +357,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.0"
+  text_word_highlighter:
+    dependency: "direct main"
+    description:
+      name: text_word_highlighter
+      sha256: a56455223093dbdb71a804e4db3f1986686101be3b7dd6996d0f5ea5289f516e
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
   vector_math:
     dependency: transitive
     description:

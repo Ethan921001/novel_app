@@ -15,8 +15,67 @@ class BookDetailScreen extends StatefulWidget {
   State<BookDetailScreen> createState() => _BookDetailScreenState();
 }
 
+class AnnotatedLine extends StatefulWidget {
+  final String line;
+  final String keyId;
+  final double fontSize;
+  final bool isHighlighted;
+  final ValueChanged<bool> onToggle;
+
+  const AnnotatedLine({
+    super.key,
+    required this.line,
+    required this.keyId,
+    required this.fontSize,
+    required this.isHighlighted,
+    required this.onToggle,
+  });
+
+  @override
+  State<AnnotatedLine> createState() => _AnnotatedLineState();
+}
+
+class _AnnotatedLineState extends State<AnnotatedLine> {
+  late bool _highlighted;
+
+  @override
+  void initState() {
+    super.initState();
+    _highlighted = widget.isHighlighted;
+  }
+
+  @override
+  void didUpdateWidget(covariant AnnotatedLine oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isHighlighted != widget.isHighlighted) {
+      _highlighted = widget.isHighlighted;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onLongPress: () {
+        setState(() {
+          _highlighted = !_highlighted;
+        });
+        widget.onToggle(_highlighted);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        color: _highlighted ? Colors.yellow.withOpacity(0.4) : null,
+        child: Text(
+          widget.line,
+          style: TextStyle(fontSize: widget.fontSize),
+        ),
+      ),
+    );
+  }
+}
+
 class _BookDetailScreenState extends State<BookDetailScreen> {
   late PageController _pageController;
+  late List<ScrollController> _scrollControllers;
   int chapterCount = 20;
   List<String> chapterTitles = [];
   double _fontSize = 16.0; // 字體大小 state
@@ -25,6 +84,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   void initState() {
     super.initState();
     _pageController = PageController();
+    _scrollControllers = List.generate(chapterCount + 1, (_) => ScrollController());
     _detectChapterCount();
     widget.book.loadComments().then((_) {
       setState(() {}); // 載入完畢後更新畫面
@@ -189,8 +249,11 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               scrollDirection: Axis.horizontal,
               itemCount: chapterCount + 1,
               itemBuilder: (context, index) {
+                final scrollController = _scrollControllers[index];
+
                 if (index == 0) {
                   return SingleChildScrollView(
+                    controller: scrollController,
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,6 +306,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                         final bodyLines = lines.length > 1 ? lines.sublist(1) : [];
 
                         return SingleChildScrollView(
+                          controller: scrollController,
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,10 +321,22 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              ...bodyLines.map((line) => Text(
-                                line,
-                                style: TextStyle(fontSize: _fontSize),
-                              )),
+                              ...bodyLines.map((line) {
+                                final keyId = '$index-$line';
+                                final isHighlighted = widget.book.annotations[keyId] ?? false;
+
+                                return AnnotatedLine(
+                                  line: line,
+                                  keyId: keyId,
+                                  fontSize: _fontSize,
+                                  isHighlighted: isHighlighted,
+                                  onToggle: (newVal) {
+                                    setState(() {
+                                      widget.book.annotations[keyId] = newVal;
+                                    });
+                                  },
+                                );
+                              }),
                             ],
                           ),
                         );

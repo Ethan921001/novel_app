@@ -1,7 +1,16 @@
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:text_word_highlighter/text_word_highlighter.dart';
+import 'package:text_word_highlighter/utils/word_highlight.dart';
 
+class HighlightRange {
+  final int start;
+  final int end;
+
+  HighlightRange(this.start, this.end);
+}
 class Character {
   final String name;
   final String description;
@@ -21,6 +30,8 @@ class Book {
 
   List<Map<String, dynamic>> comments;
   List<Character> characters;
+  Map<String, bool> annotations = {};
+  Map<int, List<WordHighlight>> highlightRanges = {};
 
   Book(
       this.title,
@@ -48,6 +59,19 @@ class Book {
   Future<void> saveComments() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(commentStorageKey, jsonEncode(comments));
+  }
+
+  Future<void> saveAnnotations() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setString('annotations_${title}', jsonEncode(annotations));
+  }
+
+  Future<void> loadAnnotations() async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString('annotations_${title}');
+    if (json != null) {
+      annotations = Map<String, dynamic>.from(jsonDecode(json)).map((key, value) => MapEntry(key, value as bool));
+    }
   }
 }
 

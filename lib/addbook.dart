@@ -88,7 +88,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
         int.tryParse(_viewsController.text.trim()) ?? 0,
         int.tryParse(_favoritesController.text.trim()) ?? 0,
         content,
-        'assets/images/default_cover.png',
+        'assets/images/no_image.png',
         characters,
         _authorController.text.trim(),
       );
