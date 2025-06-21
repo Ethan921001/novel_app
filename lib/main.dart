@@ -6,6 +6,7 @@ import 'book.dart';
 import 'account.dart';
 import 'user.dart';
 import 'bookshelf.dart';
+import 'addbook.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 void main() {
@@ -182,17 +183,44 @@ class _BookListScreenState extends State<BookListScreen> {
                     );
                   },
                   child: Card(
-                    margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    child: ListTile(
-                      leading: Image.asset(
-                        book.image,
-                        width: 50,
-                        height: 70,
-                        fit: BoxFit.cover,
+                    margin: EdgeInsets.symmetric(horizontal: 12, vertical: 16), // 整體更大
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0), // Card 內邊距放大
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center, // 垂直置中
+                        children: [
+                          Image.asset(
+                            book.image,
+                            width: 100,   // 放大圖片寬度
+                            height: 140,  // 放大圖片高度，保持比例
+                            fit: BoxFit.cover,
+                          ),
+                          SizedBox(width: 16), // 圖片和文字間距
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start, // 文字靠左對齊
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  book.title,
+                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  "作者: ${book.author}",
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                                Text(
+                                  "觀看數: ${book.views} 收藏: ${book.favorites}",
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      title: Text(book.title),
-                      subtitle: Text("作者: ${book.author}\n觀看數: ${book.views} 收藏: ${book.favorites}"),
-                      isThreeLine: true,
                     ),
                   ),
                 );
@@ -205,9 +233,7 @@ class _BookListScreenState extends State<BookListScreen> {
   }
 }
 
-
 class FrontPage extends StatelessWidget {
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -216,42 +242,80 @@ class FrontPage extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Colors.blue,
       ),
-      body: Container(
-        color: Colors.white,
-        child: ListView.builder(
-          itemCount: books.length,
-          itemBuilder: (context, index) {
-            final book = books[index];
-            return Card(
-              margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 4,
-              child: ListTile(
-                leading: Image.asset(
-                  book.image,
-                  width: 60,
-                  height: 80,
-                  fit: BoxFit.cover,
+      body: GridView.builder(
+        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        itemCount: books.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 6,
+          mainAxisSpacing: 8,
+          childAspectRatio: 0.58, // 稍微拉高比例以放大內容
+        ),
+        itemBuilder: (context, index) {
+          final book = books[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BookDetailScreen(book: book),
                 ),
-                title: Text(book.title, style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text("作者：${book.author}\n日期：${book.date}"),
-                isThreeLine: true,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BookDetailScreen(book: book),
+              );
+            },
+            child: Card(
+              margin: EdgeInsets.zero,
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: Colors.grey.shade700,
+                  width: 1.5,
+                ),
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  double cardWidth = constraints.maxWidth;
+
+                  return Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      children: [
+                        // ✅ 圖片寬度等於 Card 寬度（或略小）
+                        Image.asset(
+                          book.image,
+                          width: cardWidth, // 或 cardWidth * 0.95 讓邊緣留一點空
+                          height: cardWidth * 1.3, // 比例高度可調整
+                          fit: BoxFit.cover,
+                        ),
+                        SizedBox(height: 8),
+                        Container(
+                          width: cardWidth,
+                          child: Text(
+                            book.title,
+                            textAlign: TextAlign.center,
+                            softWrap: true,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
               ),
-            );
-          },
-        ),
+            ),
+          );
+
+        },
       ),
     );
   }
 }
+
+
+
 
 class SearchPage extends StatefulWidget {
   const SearchPage({Key? key}) : super(key: key);
@@ -309,7 +373,7 @@ class _SearchPageState extends State<SearchPage> {
                   final book = showBooks[index];
                   return Card(
                     child: ListTile(
-                      title: Text(book.title),
+                      title: Text(book.title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                       leading: Image.asset(
                         book.image,
                         width: 50,
@@ -317,6 +381,7 @@ class _SearchPageState extends State<SearchPage> {
                         fit: BoxFit.cover,
                       ),
                       subtitle: Text('作者: ${book.author}'),
+
                       onTap: () {
                         Navigator.push(
                           context,

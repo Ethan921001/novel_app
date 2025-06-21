@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class User {
   // test account: qqq
   // test password: 123
+  // test name; gjigdhghd
   final String id;
   final String name;
   List<String> favorites;
