@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'user.dart'; // 確保這個檔案有 User & UserProvider 類別
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'user.dart';
 
 class LoginRegisterWidget extends StatefulWidget {
   const LoginRegisterWidget({Key? key}) : super(key: key);
@@ -16,7 +16,7 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
 
-  Map<String, Map<String, String>> _userDatabase = {}; // account: { password, name }
+  Map<String, Map<String, dynamic>> _userDatabase = {};
 
   @override
   void initState() {
@@ -30,7 +30,7 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
     if (rawData != null) {
       final decoded = jsonDecode(rawData) as Map<String, dynamic>;
       _userDatabase = decoded.map((key, value) =>
-          MapEntry(key, Map<String, String>.from(value)));
+          MapEntry(key, Map<String, dynamic>.from(value)));
     }
   }
 
@@ -58,6 +58,8 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
     _userDatabase[account] = {
       'password': password,
       'name': name,
+      'favorites': [],
+      'comments': {},
     };
     await _saveUserDatabase();
 
@@ -67,7 +69,9 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
     _nameController.clear();
   }
 
-  void _login(BuildContext context) {
+  void _login(BuildContext context) async {
+    await _loadUserDatabase();
+
     final account = _accountController.text.trim();
     final password = _passwordController.text.trim();
 
@@ -77,28 +81,50 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
     }
 
     final userData = _userDatabase[account];
-    if (userData != null && userData['password'] == password) {
-      final user = User(id: account, name: userData['name']!);
-      Provider.of<UserProvider>(context, listen: false).login(user);
-    } else {
-      _showMessage('帳號或密碼錯誤');
+
+    try {
+      if (userData != null && userData['password'] == password) {
+        final user = User(
+          id: account,
+          name: userData['name'],
+          favorites: List<String>.from(userData['favorites'] ?? []),
+          comments: Map<String, List<String>>.from(
+            (userData['comments'] ?? {}).map(
+                  (key, value) => MapEntry(key, List<String>.from(value)),
+            ),
+          ),
+        );
+
+        await Provider.of<UserProvider>(context, listen: false).login(user);
+
+        _accountController.clear();
+        _passwordController.clear();
+        _nameController.clear();
+
+        _showMessage('登入成功');
+      } else {
+        _showMessage('帳號或密碼錯誤');
+      }
+    } catch (e) {
+      print('登入失敗: $e');
+      _showMessage('登入失敗，資料格式錯誤');
     }
   }
 
   void _logout(BuildContext context) {
+    _saveUserDatabase();
     Provider.of<UserProvider>(context, listen: false).logout();
   }
 
   void _deleteAccount(BuildContext context) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final account = userProvider.currentUser?.id;
-
     if (account == null) return;
 
     _userDatabase.remove(account);
     await _saveUserDatabase();
-    _showMessage('帳號已刪除');
     _logout(context);
+    _showMessage('帳號已刪除');
   }
 
   void _showMessage(String msg) {
@@ -107,68 +133,74 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
+    final userProvider = context.watch<UserProvider>();
     final user = userProvider.currentUser;
 
     return Scaffold(
       body: Center(
         child: user != null
-            ? Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '您好，${user.name}',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: () => _logout(context),
-              child: const Text('登出'),
-            ),
-            ElevatedButton(
-              onPressed: () => _deleteAccount(context),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('刪除帳號'),
-            ),
-          ],
-        )
-            : Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
+            ? _buildLoggedInUI(context, user)
+            : _buildLoginForm(context),
+      ),
+    );
+  }
+
+  Widget _buildLoginForm(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          TextField(
+            controller: _accountController,
+            decoration: const InputDecoration(labelText: '帳號'),
+          ),
+          TextField(
+            controller: _passwordController,
+            decoration: const InputDecoration(labelText: '密碼'),
+            obscureText: true,
+          ),
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(labelText: '名字（註冊用）'),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              TextField(
-                controller: _accountController,
-                decoration: const InputDecoration(labelText: '帳號'),
+              ElevatedButton(
+                onPressed: _register,
+                child: const Text('註冊新會員'),
               ),
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: '密碼'),
-                obscureText: true,
+              ElevatedButton(
+                onPressed: () => _login(context),
+                child: const Text('登入'),
               ),
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: '名字（註冊用）'),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  ElevatedButton(
-                    onPressed: _register,
-                    child: const Text('註冊新會員'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => _login(context),
-                    child: const Text('登入'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 80),
             ],
           ),
-        ),
+          const SizedBox(height: 80),
+        ],
       ),
+    );
+  }
+
+  Widget _buildLoggedInUI(BuildContext context, User user) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text('您好，${user.name}',
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 30),
+        ElevatedButton(
+          onPressed: () => _logout(context),
+          child: const Text('登出'),
+        ),
+        ElevatedButton(
+          onPressed: () => _deleteAccount(context),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text('刪除帳號'),
+        ),
+      ],
     );
   }
 }

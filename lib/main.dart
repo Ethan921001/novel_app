@@ -11,7 +11,7 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 void main() {
   runApp(
     ChangeNotifierProvider(
-      create: (_) => UserProvider()..tryAutoLogin(),
+      create: (_) => UserProvider(),
       child: BookListApp(),
     ),
   );
@@ -29,6 +29,7 @@ class BookListApp extends StatelessWidget {
             darkTheme: ThemeData.dark(),
             themeMode: mode,
             home: MainNavigation(),
+            debugShowCheckedModeBanner: false, // 把右上角的東東拿掉
           );
         },
     );
@@ -84,44 +85,125 @@ class _MainNavigationState extends State<MainNavigation> {
 List<Book> showBooks = [];
 final TextEditingController _searchController = TextEditingController();
 
+class BookListScreen extends StatefulWidget {
+  @override
+  _BookListScreenState createState() => _BookListScreenState();
+}
 
-class BookListScreen extends StatelessWidget {
+class _BookListScreenState extends State<BookListScreen> {
+  String? sortKey = '日期'; // 預設排序欄位
+  bool ascending = false; // 預設為降序
+  List<Book> sortedBooks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    sortBooks();
+  }
+
+  void toggleSort(String key) {
+    setState(() {
+      if (sortKey == key) {
+        ascending = !ascending; // 同一個欄位則反轉順序
+      } else {
+        sortKey = key;
+        ascending = true; // 新欄位預設升序
+      }
+      sortBooks();
+    });
+  }
+
+  void sortBooks() {
+    sortedBooks = [...books];
+    switch (sortKey) {
+      case '日期':
+        sortedBooks.sort((a, b) => a.date.compareTo(b.date));
+        break;
+      case '觀看數':
+        sortedBooks.sort((a, b) => a.views.compareTo(b.views));
+        break;
+      case '收藏數':
+        sortedBooks.sort((a, b) => a.favorites.compareTo(b.favorites));
+        break;
+    }
+    if (!ascending) {
+      sortedBooks = sortedBooks.reversed.toList();
+    }
+  }
+
+  Icon sortIcon(String key) {
+    if (key != sortKey) return Icon(Icons.unfold_more, size: 16);
+    return ascending ? Icon(Icons.arrow_upward, size: 16) : Icon(Icons.arrow_downward, size: 16);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("書籍分類")),
-      body: ListView.builder(
-        itemCount: books.length,
-        itemBuilder: (context, index) {
-          final book = books[index];
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BookDetailScreen(book: book),
+      body: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            height: 50,
+            color: Colors.grey[100],
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                TextButton.icon(
+                  onPressed: () => toggleSort('日期'),
+                  icon: sortIcon('日期'),
+                  label: Text('日期'),
                 ),
-              );
-            },
-            child: Card(
-              child: ListTile(
-                leading: Image.asset(
-                  book.image,
-                  width: 50,
-                  height: 70,
-                  fit: BoxFit.cover,
+                TextButton.icon(
+                  onPressed: () => toggleSort('觀看數'),
+                  icon: sortIcon('觀看數'),
+                  label: Text('觀看數'),
                 ),
-                title: Text(book.title),
-                subtitle: Text("作者: ${book.author}"),
-              ),
+                TextButton.icon(
+                  onPressed: () => toggleSort('收藏數'),
+                  icon: sortIcon('收藏數'),
+                  label: Text('收藏數'),
+                ),
+              ],
             ),
-          );
-        },
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: sortedBooks.length,
+              itemBuilder: (context, index) {
+                final book = sortedBooks[index];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BookDetailScreen(book: book),
+                      ),
+                    );
+                  },
+                  child: Card(
+                    margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: ListTile(
+                      leading: Image.asset(
+                        book.image,
+                        width: 50,
+                        height: 70,
+                        fit: BoxFit.cover,
+                      ),
+                      title: Text(book.title),
+                      subtitle: Text("作者: ${book.author}\n觀看數: ${book.views} 收藏: ${book.favorites}"),
+                      isThreeLine: true,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
-
 
 
 class FrontPage extends StatelessWidget {
@@ -132,15 +214,39 @@ class FrontPage extends StatelessWidget {
       appBar: AppBar(
         title: Text("首頁"),
         centerTitle: true,
-        backgroundColor: Colors.blue, // ✅ AppBar 背景藍色
+        backgroundColor: Colors.blue,
       ),
       body: Container(
-        color: Colors.white, // ✅ 頁面內容區背景白色
-        child: Center(
-          child: Text(
-            "這是首頁內容",
-            style: TextStyle(fontSize: 20),
-          ),
+        color: Colors.white,
+        child: ListView.builder(
+          itemCount: books.length,
+          itemBuilder: (context, index) {
+            final book = books[index];
+            return Card(
+              margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 4,
+              child: ListTile(
+                leading: Image.asset(
+                  book.image,
+                  width: 60,
+                  height: 80,
+                  fit: BoxFit.cover,
+                ),
+                title: Text(book.title, style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text("作者：${book.author}\n日期：${book.date}"),
+                isThreeLine: true,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BookDetailScreen(book: book),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         ),
       ),
     );
