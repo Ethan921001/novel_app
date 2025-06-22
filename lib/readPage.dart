@@ -240,6 +240,32 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.book.title),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: IconButton(
+              icon: Icon(
+                isFavorited ? Icons.favorite : Icons.favorite_border,
+                color: Colors.redAccent,
+              ),
+              tooltip: '收藏',
+              onPressed: () {
+                if (user == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("請先登入才能收藏")),
+                  );
+                } else {
+                  userProvider.toggleFavorite(widget.book.title);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(isFavorited ? "已取消收藏" : "已加入收藏"),
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -349,7 +375,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           ),
           Container(
             color: Theme.of(context).colorScheme.surfaceVariant,
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -357,9 +383,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                   ElevatedButton.icon(
                     onPressed: _showChapterDialog,
                     icon: const Icon(Icons.menu_book),
-                    label: const Text('章節選擇'),
+                    label: const Text(' 章節選擇 '),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: () {
                       themeNotifier.value = themeNotifier.value == ThemeMode.light
@@ -367,9 +393,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                           : ThemeMode.light;
                     },
                     icon: const Icon(Icons.brightness_6),
-                    label: const Text('日/夜間'),
+                    label: const Text(' 日/夜間 '),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: () async {
                       Navigator.push(
@@ -382,30 +408,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       );
                     },
                     icon: const Icon(Icons.headphones),
-                    label: const Text('聽書模式'),
+                    label: const Text(' 聽書模式 '),
                   ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      if (user == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("請先登入才能收藏")),
-                        );
-                      } else {
-                        userProvider.toggleFavorite(widget.book.title);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              isFavorited ? "已取消收藏" : "已加入收藏",
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    icon: Icon(isFavorited ? Icons.favorite : Icons.favorite_border),
-                    label: const Text('收藏'),
-                  ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: () {
                       final controller = TextEditingController();
@@ -507,9 +512,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       );
                     },
                     icon: const Icon(Icons.comment),
-                    label: const Text('評論'),
+                    label: const Text(' 評論 '),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   ElevatedButton.icon(
                     onPressed: () {
                       setState(() {
@@ -517,9 +522,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       });
                     },
                     icon: const Icon(Icons.zoom_in),
-                    label: const Text('放大字體'),
+                    label: const Text(' 放大字體 '),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   ElevatedButton.icon(
                     onPressed: () {
                       setState(() {
@@ -527,7 +532,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       });
                     },
                     icon: const Icon(Icons.zoom_out),
-                    label: const Text('縮小字體'),
+                    label: const Text(' 縮小字體 '),
                   ),
                 ],
               ),
