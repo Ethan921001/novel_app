@@ -1,7 +1,9 @@
 import 'book.dart';
 
 List<Character> character1 = [ // 重生之我在成大資工當電神
-  Character(name: '作者本人', description: '真牛逼')
+  Character(name: '楊過', description: '男主角，性格倔強癲狂，愛恨分明，武功絕頂'),
+  Character(name: '小龍女', description: '女主角，冷若冰霜，出塵脫俗，對楊過情深不悔'),
+  Character(name: '郭靖', description: '楊過義父，為人忠厚正直，是《射鵰英雄傳》主角之一'),
 ];
 
 List<Character> character2 = [ // 水滸全傳
@@ -62,7 +64,7 @@ List<Character> character10 = [ // 三體
 
 
 final List<Book> books = [
-  Book("重生之我在成大資工當電神", "Chatgpt",  "2025/05/30", 888888, 99999, 'assets/books/book0','assets/images/book0.jpg',character1),
+  Book("神鵰俠侶", "金庸",  "1959/05/20", 888888, 99999, 'assets/books/book0','assets/images/book0.jpg',character1),
   Book("水滸全傳", "施耐庵", "1589/??/??", 100000, 100000,'assets/books/book1','assets/images/book1.png',character2),
   Book("金瓶梅詞話", "蘭陵笑笑生", "1610/??/??", 200000, 200000,'assets/books/book2','assets/images/book2.jpg',character3),
   Book("三國演義", "羅貫中", "1522/??/??", 250000, 250000,'assets/books/book3','assets/images/book3.jpg',character4),

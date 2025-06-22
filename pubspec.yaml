@@ -97,11 +97,14 @@ flutter:
     - assets/images/book7.jpg
     - assets/images/book8.jpg
     - assets/images/book9.jpg
+    - assets/images/book_default.png
     - assets/images/no_image.png
     - assets/books/book0/chapter1.txt
     - assets/books/book0/chapter2.txt
     - assets/books/book0/chapter3.txt
     - assets/books/book0/chapter4.txt
+    - assets/books/book0/chapter5.txt
+    - assets/books/book0/chapter6.txt
     - assets/books/book1/chapter1.txt
     - assets/books/book1/chapter2.txt
     - assets/books/book1/chapter3.txt
