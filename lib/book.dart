@@ -11,6 +11,7 @@ class HighlightRange {
 
   HighlightRange(this.start, this.end);
 }
+
 class Character {
   final String name;
   final String description;
