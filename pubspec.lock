@@ -151,10 +151,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_tts
-      sha256: bdf2fc4483e74450dc9fc6fe6a9b6a5663e108d4d0dad3324a22c8e26bf48af4
+      sha256: baa3cb6b4990318460fe28bfa8c7869399e97223971532c02bd97c5e876aa3c5
       url: "https://pub.dev"
     source: hosted
-    version: "4.2.3"
+    version: "4.2.2"
   flutter_web_plugins:
     dependency: transitive
     description: flutter
@@ -493,6 +493,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.2"
+  text_word_highlighter:
+    dependency: "direct main"
+    description:
+      name: text_word_highlighter
+      sha256: a56455223093dbdb71a804e4db3f1986686101be3b7dd6996d0f5ea5289f516e
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
   vector_math:
     dependency: transitive
     description:

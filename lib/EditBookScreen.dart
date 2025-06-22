@@ -1,63 +1,125 @@
-// edit_book_screen.dart
 import 'package:flutter/material.dart';
 import 'book.dart';
 import 'book_data.dart';
 
-class EditBookScreen extends StatefulWidget {
-  final Book book;
+class BookFormScreen extends StatefulWidget {
+  final Book? book; // 若為 null 則為新增，否則為編輯
 
-  const EditBookScreen({super.key, required this.book});
+  const BookFormScreen({super.key, this.book});
 
   @override
-  State<EditBookScreen> createState() => _EditBookScreenState();
+  State<BookFormScreen> createState() => _BookFormScreenState();
 }
 
-class _EditBookScreenState extends State<EditBookScreen> {
-  final _formKey = GlobalKey<FormState>();
-  late TextEditingController _titleController;
-  late TextEditingController _authorController;
-  late TextEditingController _dateController;
-  late TextEditingController _introController;
+class _BookFormScreenState extends State<BookFormScreen> {
+  int step = 1;
 
-  List<TextEditingController> _chapterTitleControllers = [];
-  List<TextEditingController> _chapterContentControllers = [];
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _authorController = TextEditingController();
+  final _dateController = TextEditingController();
+  final _viewsController = TextEditingController();
+  final _favoritesController = TextEditingController();
+
+  int characterCount = 0;
   List<TextEditingController> _characterNameControllers = [];
   List<TextEditingController> _characterDescControllers = [];
+
+  final _introController = TextEditingController();
+  List<TextEditingController> _chapterTitleControllers = [];
+  List<TextEditingController> _chapterContentControllers = [];
 
   @override
   void initState() {
     super.initState();
+    if (widget.book != null) {
+      final book = widget.book!;
+      _titleController.text = book.title;
+      _authorController.text = book.author;
+      _dateController.text = book.date;
+      _viewsController.text = book.views.toString();
+      _favoritesController.text = book.favorites.toString();
 
-    _titleController = TextEditingController(text: widget.book.title);
-    _authorController = TextEditingController(text: widget.book.author);
-    _dateController = TextEditingController(text: widget.book.date);
+      characterCount = book.characters.length;
+      _characterNameControllers = book.characters
+          .map((c) => TextEditingController(text: c.name))
+          .toList();
+      _characterDescControllers = book.characters
+          .map((c) => TextEditingController(text: c.description))
+          .toList();
 
-    final content = widget.book.content;
-    final introMatch =
-    RegExp(r'#INTRO#([\s\S]*?)(?=#CHAPTER#|\$)').firstMatch(content);
-    _introController =
-        TextEditingController(text: introMatch?.group(1)?.trim() ?? '');
+      final contentLines = book.content.split('\n');
+      final introLines = <String>[];
+      final chapterTitles = <String>[];
+      final chapterBodies = <String>[];
 
-    final chapterMatches = RegExp(r'#CHAPTER# (.*?)\n([\s\S]*?)(?=#CHAPTER#|\\$)')
-        .allMatches(content);
-    _chapterTitleControllers = chapterMatches
-        .map((m) => TextEditingController(text: m.group(1)?.trim()))
-        .toList();
-    _chapterContentControllers = chapterMatches
-        .map((m) => TextEditingController(text: m.group(2)?.trim()))
-        .toList();
+      bool inIntro = false, inChapter = false;
+      String currentBody = '';
 
-    if (widget.book.characters != null) {
-      for (var c in widget.book.characters!) {
-        _characterNameControllers.add(TextEditingController(text: c.name));
-        _characterDescControllers
-            .add(TextEditingController(text: c.description));
+      for (String line in contentLines) {
+        if (line.startsWith('#INTRO#')) {
+          inIntro = true;
+          inChapter = false;
+          continue;
+        }
+        if (line.startsWith('#CHAPTER#')) {
+          if (currentBody.isNotEmpty) {
+            chapterBodies.add(currentBody.trim());
+            currentBody = '';
+          }
+          inIntro = false;
+          inChapter = true;
+          chapterTitles.add(line.replaceFirst('#CHAPTER#', '').trim());
+          continue;
+        }
+        if (inIntro) {
+          introLines.add(line);
+        } else if (inChapter) {
+          currentBody += '$line\n';
+        }
       }
+      if (currentBody.isNotEmpty) {
+        chapterBodies.add(currentBody.trim());
+      }
+
+      _introController.text = introLines.join('\n').trim();
+      _chapterTitleControllers = chapterTitles
+          .map((title) => TextEditingController(text: title))
+          .toList();
+      _chapterContentControllers = chapterBodies
+          .map((body) => TextEditingController(text: body))
+          .toList();
     }
   }
 
-  void _saveChanges() {
-    if (!_formKey.currentState!.validate()) return;
+  void _prepareCharacters() {
+    _characterNameControllers =
+        List.generate(characterCount, (_) => TextEditingController());
+    _characterDescControllers =
+        List.generate(characterCount, (_) => TextEditingController());
+  }
+
+  void _addChapter() {
+    setState(() {
+      _chapterTitleControllers.add(TextEditingController());
+      _chapterContentControllers.add(TextEditingController());
+    });
+  }
+
+  void _removeChapter(int index) {
+    setState(() {
+      _chapterTitleControllers.removeAt(index);
+      _chapterContentControllers.removeAt(index);
+    });
+  }
+
+  void _saveOrUpdateBook() {
+    // if (!(_formKey.currentState?.validate() ?? false)) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text("請確認書名是否填寫")),
+    //   );
+    //   return;
+    // }
 
     String content = '#INTRO#\n${_introController.text.trim()}\n';
     for (int i = 0; i < _chapterTitleControllers.length; i++) {
@@ -75,137 +137,179 @@ class _EditBookScreenState extends State<EditBookScreen> {
       }
     }
 
-    setState(() {
-      widget.book.title = _titleController.text.trim();
-      widget.book.author = _authorController.text.trim();
-      widget.book.date = _dateController.text.trim();
-      widget.book.content = content;
-      widget.book.characters = characters;
-    });
+    final isEdit = widget.book != null;
+    final book = widget.book ??
+        Book('', '', '', 0, 0, '', 'assets/images/no_image.png', [], '');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("已儲存修改")),
+    book.title = _titleController.text.trim();
+    book.author = _authorController.text.trim();
+    book.date = _dateController.text.trim();
+    book.views = int.tryParse(_viewsController.text.trim()) ?? 0;
+    book.favorites = int.tryParse(_favoritesController.text.trim()) ?? 0;
+    book.content = content;
+    book.characters = characters;
+
+    if (!isEdit) {
+      books.add(book);
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isEdit ? "成功修改" : "新增成功"),
+        content: Text(isEdit ? "書籍內容已更新" : "書籍已新增"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.of(context).pop();
+            },
+            child: const Text("確定"),
+          ),
+        ],
+      ),
     );
-    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
+    final isEdit = widget.book != null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('編輯書籍')),
+      appBar: AppBar(title: Text(isEdit ? '編輯書籍' : '新增書籍')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
+        child: step == 1
+            ? _buildStep1()
+            : step == 2
+            ? _buildStep2()
+            : _buildStep3(),
+      ),
+    );
+  }
+
+  Widget _buildStep1() {
+    return Form(
+      key: _formKey,
+      child: ListView(
+        children: [
+          TextFormField(
+            controller: _titleController,
+            decoration: const InputDecoration(labelText: '書名'),
+            validator: (v) => v == null || v.isEmpty ? '請輸入書名' : null,
+          ),
+          TextFormField(
+            controller: _authorController,
+            decoration: const InputDecoration(labelText: '作者'),
+          ),
+          TextFormField(
+            controller: _dateController,
+            decoration: const InputDecoration(labelText: '日期'),
+          ),
+          TextFormField(
+            controller: _viewsController,
+            decoration: const InputDecoration(labelText: '瀏覽次數'),
+            keyboardType: TextInputType.number,
+          ),
+          TextFormField(
+            controller: _favoritesController,
+            decoration: const InputDecoration(labelText: '收藏數'),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              setState(() => step = 2);
+            },
+            child: const Text('下一步：輸入角色'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStep2() {
+    return ListView(
+      children: [
+        TextFormField(
+          decoration: const InputDecoration(labelText: '角色數量'),
+          keyboardType: TextInputType.number,
+          initialValue: characterCount.toString(),
+          onChanged: (value) {
+            final count = int.tryParse(value.trim()) ?? 0;
+            setState(() {
+              characterCount = count;
+              _prepareCharacters();
+            });
+          },
+        ),
+        const SizedBox(height: 8),
+        for (int i = 0; i < characterCount; i++) ...[
+          TextFormField(
+            controller: i < _characterNameControllers.length
+                ? _characterNameControllers[i]
+                : TextEditingController(),
+            decoration: InputDecoration(labelText: '角色 ${i + 1} 名字'),
+          ),
+          TextFormField(
+            controller: i < _characterDescControllers.length
+                ? _characterDescControllers[i]
+                : TextEditingController(),
+            decoration: InputDecoration(labelText: '角色 ${i + 1} 描述'),
+          ),
+          const Divider(),
+        ],
+        ElevatedButton(
+          onPressed: () => setState(() => step = 3),
+          child: const Text('下一步：輸入章節'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep3() {
+    return ListView(
+      children: [
+        TextFormField(
+          controller: _introController,
+          decoration: const InputDecoration(labelText: '簡介'),
+          maxLines: 3,
+        ),
+        const SizedBox(height: 16),
+        const Text('章節內容',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        for (int i = 0; i < _chapterTitleControllers.length; i++) ...[
+          TextFormField(
+            controller: _chapterTitleControllers[i],
+            decoration: InputDecoration(labelText: '第 ${i + 1} 章 標題'),
+          ),
+          TextFormField(
+            controller: _chapterContentControllers[i],
+            maxLines: 4,
+            decoration: InputDecoration(labelText: '第 ${i + 1} 章 內容'),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(labelText: '書名'),
-                validator: (v) => v == null || v.trim().isEmpty ? '請輸入書名' : null,
-              ),
-              TextFormField(
-                controller: _authorController,
-                decoration: const InputDecoration(labelText: '作者'),
-              ),
-              TextFormField(
-                controller: _dateController,
-                decoration: const InputDecoration(labelText: '日期'),
-              ),
-              TextFormField(
-                controller: _introController,
-                decoration: const InputDecoration(labelText: '簡介'),
-                maxLines: 3,
-              ),
-              const Divider(),
-              const Text("角色列表", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              for (int i = 0; i < _characterNameControllers.length; i++) ...[
-                TextFormField(
-                  controller: _characterNameControllers[i],
-                  decoration: InputDecoration(labelText: '角色 ${i + 1} 名字'),
-                ),
-                TextFormField(
-                  controller: _characterDescControllers[i],
-                  decoration: InputDecoration(labelText: '角色 ${i + 1} 描述'),
-                ),
-                const SizedBox(height: 12),
-              ],
-              Row(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _characterNameControllers.add(TextEditingController());
-                        _characterDescControllers.add(TextEditingController());
-                      });
-                    },
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('新增角色'),
-                  ),
-                  const SizedBox(width: 8),
-                  if (_characterNameControllers.isNotEmpty)
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _characterNameControllers.removeLast();
-                          _characterDescControllers.removeLast();
-                        });
-                      },
-                      icon: const Icon(Icons.remove_circle),
-                      label: const Text('刪除角色'),
-                    ),
-                ],
-              ),
-              const Divider(),
-              const Text("章節內容", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              for (int i = 0; i < _chapterTitleControllers.length; i++) ...[
-                TextFormField(
-                  controller: _chapterTitleControllers[i],
-                  decoration: InputDecoration(labelText: '第 ${i + 1} 章標題'),
-                ),
-                TextFormField(
-                  controller: _chapterContentControllers[i],
-                  maxLines: 5,
-                  decoration: InputDecoration(labelText: '第 ${i + 1} 章內容'),
-                ),
-                const SizedBox(height: 12),
-              ],
-              Row(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _chapterTitleControllers
-                            .add(TextEditingController(text: '第${_chapterTitleControllers.length + 1}章'));
-                        _chapterContentControllers.add(TextEditingController());
-                      });
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('新增章節'),
-                  ),
-                  const SizedBox(width: 8),
-                  if (_chapterTitleControllers.length > 1)
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _chapterTitleControllers.removeLast();
-                          _chapterContentControllers.removeLast();
-                        });
-                      },
-                      icon: const Icon(Icons.remove),
-                      label: const Text('刪除章節'),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _saveChanges,
-                child: const Text('儲存修改'),
-              ),
+              IconButton(
+                onPressed: () => _removeChapter(i),
+                icon: const Icon(Icons.delete),
+              )
             ],
           ),
+          const Divider(),
+        ],
+        ElevatedButton(
+          onPressed: _addChapter,
+          child: const Text('新增章節'),
         ),
-      ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: _saveOrUpdateBook,
+          child: const Text('完成'),
+        ),
+      ],
     );
   }
 }

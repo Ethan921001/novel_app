@@ -39,6 +39,7 @@ dependencies:
   path_provider: ^2.1.5
   provider: ^6.1.5
   shared_preferences: ^2.3.3
+  text_word_highlighter: ^1.0.2
   flutter_stable_diffusion: ^1.0.0+2
 #  dio: ^5.8.0+1
   dio : ^4.0.6
@@ -77,17 +78,46 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/books/book0/intro.txt
+    - assets/books/book1/intro.txt
+    - assets/books/book2/intro.txt
+    - assets/books/book3/intro.txt
+    - assets/books/book4/intro.txt
     - assets/images/book0.jpg
+    - assets/images/book1.png
+    - assets/images/book2.jpg
+    - assets/images/book3.jpg
+    - assets/images/book4.jpg
     - assets/images/no_image.png
     - assets/books/book0/chapter1.txt
     - assets/books/book0/chapter2.txt
     - assets/books/book0/chapter3.txt
     - assets/books/book0/chapter4.txt
     - assets/books/book1/chapter1.txt
+    - assets/books/book1/chapter2.txt
+    - assets/books/book1/chapter3.txt
+    - assets/books/book1/chapter4.txt
+    - assets/books/book1/chapter5.txt
+    - assets/books/book1/chapter6.txt
     - assets/books/book2/chapter1.txt
+    - assets/books/book2/chapter2.txt
+    - assets/books/book2/chapter3.txt
+    - assets/books/book2/chapter4.txt
+    - assets/books/book2/chapter5.txt
+    - assets/books/book2/chapter6.txt
     - assets/books/book3/chapter1.txt
+    - assets/books/book3/chapter2.txt
+    - assets/books/book3/chapter3.txt
+    - assets/books/book3/chapter4.txt
+    - assets/books/book3/chapter5.txt
+    - assets/books/book3/chapter6.txt
     - assets/books/book4/chapter1.txt
+    - assets/books/book4/chapter2.txt
+    - assets/books/book4/chapter3.txt
+    - assets/books/book4/chapter4.txt
+    - assets/books/book4/chapter5.txt
+    - assets/books/book4/chapter6.txt
     - assets/books/book5/chapter1.txt
+    - assets/database/data.txt
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
