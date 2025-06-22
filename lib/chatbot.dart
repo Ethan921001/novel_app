@@ -1,200 +1,236 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:intl/intl.dart';
-
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 void main() {
-  /// Call the runApp function to start the app
   runApp(const MyApp());
 }
 
-/// The [MyApp] widget is the root widget of the app
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
+      title: '有記憶的聊天',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const CharacterSelectionPage(),
+    );
+  }
+}
 
-      /// Set the app theme to use Material 3
-      theme: ThemeData(
-        useMaterial3: true,
+class CharacterSelectionPage extends StatelessWidget {
+  const CharacterSelectionPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('選擇角色')),
+      body: ListView(
+        children: [
+          ListTile(
+            title: const Text('孫悟空'),
+            subtitle: const Text('西遊記'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatPage(
+                    characterName: '孫悟空',
+                    characterDescription: '西遊記角色',
+                  ),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text('心理醫生'),
+            subtitle: const Text('會參考之前的談話內容'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatPage(
+                    characterName: '心理醫生',
+                    characterDescription: '我會參考我們之前的談話來幫助你',
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
-
-      /// Set the app home page to be the Test widget
-      home: CharacterSelectionPage(),
     );
-  }
-}
-
-
-class ChatMessage {
-  final String id;
-  final String content;
-  final bool isUser;
-  final DateTime timestamp;
-
-  ChatMessage({
-    required this.id,
-    required this.content,
-    required this.isUser,
-    required this.timestamp,
-  });
-
-  factory ChatMessage.user(String content) {
-    return ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: content,
-      isUser: true,
-      timestamp: DateTime.now(),
-    );
-  }
-
-  factory ChatMessage.assistant(String content) {
-    return ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: content,
-      isUser: false,
-      timestamp: DateTime.now(),
-    );
-  }
-}
-
-class OpenAIService {
-  static const String _apiKey = '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';
-  static const String _apiUrl = 'https://api.openai.com/v1/chat/completions';
-
-  Future<String> sendMessageAsCharacter({
-    required String message,
-    required String characterDescription,
-    List<Map<String, String>> history = const [],
-  }) async {
-    final messages = [
-      {
-        'role': 'system',
-        'content': '''
-      你現在要扮演以下角色：
-      $characterDescription
-      
-      請注意：
-      1. 完全以角色身份回應
-      2. 保持角色語言風格
-      3. 回答簡潔，2-3句話
-      
-      '''
-      },
-      ...history,
-      {'role': 'user', 'content': message},
-    ];
-
-    return sendMessage(messages: messages);
-  }
-
-
-  Future<String> sendMessage({
-    required List<Map<String, String>> messages,
-    String model = 'gpt-3.5-turbo',
-    double temperature = 0.7,
-    int maxTokens = 500,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse(_apiUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
-        },
-        body: jsonEncode({
-          'model': model,
-          'messages': messages,
-          'temperature': temperature,
-          'max_tokens': maxTokens,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['choices'][0]['message']['content'];
-      } else {
-        throw Exception('API请求失败: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('请求出错: $e');
-    }
   }
 }
 
 class ChatPage extends StatefulWidget {
-  final Character? character;
+  final String characterName;
+  final String characterDescription;
 
-  const ChatPage({super.key, this.character});
+  const ChatPage({
+    required this.characterName,
+    required this.characterDescription,
+    super.key,
+  });
 
   @override
   State<ChatPage> createState() => _ChatPageState();
 }
 
-
-
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
-  final OpenAIService _openAIService = OpenAIService();
-  final List<ChatMessage> _messages = [];
+  final ConversationMemory _memory = ConversationMemory();
   bool _isLoading = false;
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    // 延遲一小段時間後發送歡迎消息
-    Future.delayed(const Duration(milliseconds: 500), () {
-      _addWelcomeMessage();
-    });
+    _sendWelcomeMessage();
   }
 
-  void _addWelcomeMessage() async{
-
-    final welcome_text = await _openAIService.sendMessageAsCharacter(
-      message: "現在自我介紹，並打招呼",
-      characterDescription: widget.character!.description,
-      history: _messages.reversed
-          .where((msg) => msg.content.isNotEmpty)
-          .map((msg) => {
-        'role': msg.isUser ? 'user' : 'assistant',
-        'content': msg.content,
-      })
-          .toList(),
-
+  Future<void> _sendWelcomeMessage() async {
+    // final welcomeMessage = ChatMessage(
+    //   content: '你好！我是${widget.characterName}，${widget.characterDescription}',
+    //   isUser: false,
+    //   timestamp: DateTime.now(),
+    //   role: 'assistant',
+    // );
+    //
+    // setState(() {
+    //   _memory.addMessage(welcomeMessage);
+    // });
+    final init_message = "你現在扮演${widget.characterName}，${widget.characterDescription}。請用這個角色的身份和語言風格對話，現在自我介紹。";
+    final userMessage = ChatMessage(
+      content: init_message,
+      isUser: true,
+      timestamp: DateTime.now(),
+      role: 'system',
     );
+    _messageController.clear();
+
     setState(() {
-      _messages.add(ChatMessage.assistant(welcome_text));
+      _memory.addMessage(userMessage);
+      _isLoading = true;
     });
 
+    _scrollToBottom();
+
+    try {
+      final aiResponse = await _getAIResponse();
+
+      setState(() {
+        _memory.addMessage(aiResponse);
+      });
+    } catch (e) {
+      setState(() {
+        _memory.addMessage(ChatMessage(
+          content: '抱歉，我遇到了一些問題: $e',
+          isUser: false,
+          timestamp: DateTime.now(),
+          role: 'assistant',
+        ));
+      });
+    } finally {
+      setState(() => _isLoading = false);
+      _scrollToBottom();
+    }
+  }
+
+  Future<void> _sendMessage() async {
+    if (_messageController.text.isEmpty || _isLoading) return;
+
+    final userMessage = ChatMessage(
+      content: _messageController.text,
+      isUser: true,
+      timestamp: DateTime.now(),
+      role: 'user',
+    );
+    _messageController.clear();
+
+    setState(() {
+      _memory.addMessage(userMessage);
+      _isLoading = true;
+    });
+
+    _scrollToBottom();
+
+    try {
+      final aiResponse = await _getAIResponse();
+
+      setState(() {
+        _memory.addMessage(aiResponse);
+      });
+    } catch (e) {
+      setState(() {
+        _memory.addMessage(ChatMessage(
+          content: '抱歉，我遇到了一些問題: $e',
+          isUser: false,
+          timestamp: DateTime.now(),
+          role: 'assistant',
+        ));
+      });
+    } finally {
+      setState(() => _isLoading = false);
+      _scrollToBottom();
+    }
+  }
+
+  Future<ChatMessage> _getAIResponse() async {
+    try {
+      const apiKey = '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'; // 替換為你的API密鑰
+      final response = await http.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode({
+          'model': 'gpt-3.5-turbo',
+          'messages': [
+            {
+              'role': 'system',
+              'content':
+                  '若之前有對話紀錄，請參考之前的對話內容進行回應。'
+            },
+            ..._memory.getMessagesForApi(),
+          ],
+          'temperature': 0.7,
+          'max_tokens': 500,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return ChatMessage(
+          content: data['choices'][0]['message']['content'],
+          isUser: false,
+          timestamp: DateTime.now(),
+          role: 'assistant',
+        );
+      } else {
+        throw Exception('API請求失敗: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('請求出錯: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI聊天'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: _clearConversation,
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text('與${widget.characterName}對話')),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
               reverse: true,
-              itemCount: _messages.length,
+              itemCount: _memory.getRecentMessages(100).length,
               itemBuilder: (context, index) {
-                final message = _messages.reversed.toList()[index];
+                final message = _memory.getRecentMessages(100).reversed.toList()[index];
                 return _buildMessageBubble(message);
               },
             ),
@@ -206,52 +242,39 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildMessageBubble(ChatMessage message) {
+    // 隱藏系統訊息
+    if (message.role == 'system') return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        crossAxisAlignment: message.isUser
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: message.isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
+      child: Align(
+        alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.8,
+          ),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: message.isUser
+                ? Colors.blue[100]
+                : Colors.grey[300],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!message.isUser)
-                const CircleAvatar(
-                  child: Icon(Icons.android),
-                ),
-              const SizedBox(width: 8),
               Text(
-                DateFormat('HH:mm').format(message.timestamp),
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-              const SizedBox(width: 8),
-              if (message.isUser)
-                const CircleAvatar(
-                  child: Icon(Icons.person),
+                message.isUser ? '你' : widget.characterName,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: message.isUser ? Colors.blue[800] : Colors.grey[800],
                 ),
+              ),
+              const SizedBox(height: 4),
+              Text(message.content),
             ],
           ),
-          const SizedBox(height: 4),
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.8,
-            ),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: message.isUser
-                  ? Theme.of(context).primaryColor.withOpacity(0.1)
-                  : Colors.grey[200],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: MarkdownBody(
-              data: message.content,
-              selectable: true,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -265,17 +288,11 @@ class _ChatPageState extends State<ChatPage> {
             child: TextField(
               controller: _messageController,
               decoration: InputDecoration(
-                hintText: '输入消息...',
+                hintText: '輸入訊息...',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                  borderRadius: BorderRadius.circular(20),
                 ),
               ),
-              maxLines: 3,
-              minLines: 1,
               onSubmitted: (_) => _sendMessage(),
             ),
           ),
@@ -284,71 +301,11 @@ class _ChatPageState extends State<ChatPage> {
             icon: _isLoading
                 ? const CircularProgressIndicator()
                 : const Icon(Icons.send),
-            onPressed: _isLoading ? null : _sendMessage,
+            onPressed: _sendMessage,
           ),
         ],
       ),
     );
-  }
-
-  Future<void> _sendMessage() async {
-    if (_messageController.text.isEmpty || _isLoading) return;
-
-    final userMessage = _messageController.text;
-    _messageController.clear();
-
-    setState(() {
-      _messages.add(ChatMessage.user(userMessage));
-      _isLoading = true;
-    });
-
-    _scrollToBottom();
-
-    try {
-      final messages = _messages.reversed
-          .map((msg) => {
-        'role': msg.isUser ? 'user' : 'assistant',
-        'content': msg.content,
-      })
-          .toList();
-
-      final response;
-      // if (widget.character != null) {
-      //   response = await _openAIService.sendMessageAsCharacter(
-      //     message: userMessage,
-      //     characterDescription: widget.character!.description,
-      //     history: _messages.reversed
-      //         .where((msg) => msg.content.isNotEmpty)
-      //         .map((msg) => {
-      //       'role': msg.isUser ? 'user' : 'assistant',
-      //       'content': msg.content,
-      //     })
-      //         .toList(),
-      //   );
-      // } else {
-        // 普通聊天模式
-        response = await _openAIService.sendMessage(
-          messages: _messages.reversed
-              .where((msg) => msg.content.isNotEmpty)
-              .map((msg) => {
-            'role': msg.isUser ? 'user' : 'assistant',
-            'content': msg.content,
-          })
-              .toList(),
-        );
-      // }
-
-      setState(() {
-        _messages.add(ChatMessage.assistant(response));
-      });
-    } catch (e) {
-      setState(() {
-        _messages.add(ChatMessage.assistant('出错: $e'));
-      });
-    } finally {
-      setState(() => _isLoading = false);
-      _scrollToBottom();
-    }
   }
 
   void _scrollToBottom() {
@@ -363,59 +320,61 @@ class _ChatPageState extends State<ChatPage> {
     });
   }
 
-  void _clearConversation() {
-    setState(() {
-      _messages.clear();
-    });
-  }
-}
-
-
-// 创建角色选择界面
-class CharacterSelectionPage extends StatelessWidget {
-  final List<Character> characters = [
-    Character(
-      name: '武侠剑客',
-      description: '一位年过五旬的武林前辈，说话带有古风，常用成语典故',
-    ),
-    Character(
-      name: '科幻AI',
-      description: '高度智能的未来AI，回答精确且逻辑性强，带有科技感',
-    ),
-    // 更多角色...
-  ];
-
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('选择角色')),
-      body: ListView.builder(
-        itemCount: characters.length,
-        itemBuilder: (context, index) {
-          final character = characters[index];
-          return ListTile(
-            title: Text(character.name),
-            subtitle: Text(character.description),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChatPage(
-                    character: character,
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 }
 
-class Character {
-  final String name;
-  final String description;
+class ChatMessage {
+  final String id;
+  final String content;
+  final bool isUser;
+  final DateTime timestamp;
+  final String? role;
 
-  Character({required this.name, required this.description});
+  ChatMessage({
+    required this.content,
+    required this.isUser,
+    required this.timestamp,
+    this.role,
+    String? id,
+  }) : id = id ?? DateTime.now().millisecondsSinceEpoch.toString();
+
+  Map<String, String> toApiMap() {
+    return {
+      'role': role ?? (isUser ? 'user' : 'assistant'),
+      'content': content,
+    };
+  }
+}
+
+class ConversationMemory {
+  final List<ChatMessage> _messages = [];
+  final int _maxMemoryLength;
+
+  ConversationMemory({int maxMemoryLength = 20})
+      : _maxMemoryLength = maxMemoryLength;
+
+  void addMessage(ChatMessage message) {
+    _messages.add(message);
+    if (_messages.length > _maxMemoryLength) {
+      _messages.removeAt(0);
+    }
+  }
+
+  List<Map<String, String>> getMessagesForApi() {
+    return _messages.map((msg) => msg.toApiMap()).toList();
+  }
+
+  List<ChatMessage> getRecentMessages(int count) {
+    final start = _messages.length - count;
+    return _messages.sublist(start < 0 ? 0 : start);
+  }
+
+  void clear() {
+    _messages.clear();
+  }
 }
