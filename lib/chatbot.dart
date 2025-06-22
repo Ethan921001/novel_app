@@ -64,7 +64,7 @@ class ChatMessage {
 }
 
 class OpenAIService {
-  static const String _apiKey = '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';
+  static const String _apiKey = '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';
   static const String _apiUrl = 'https://api.openai.com/v1/chat/completions';
 
   Future<String> sendMessageAsCharacter({
