@@ -139,7 +139,7 @@ class _BookFormScreenState extends State<BookFormScreen> {
 
     final isEdit = widget.book != null;
     final book = widget.book ??
-        Book('', '', '', 0, 0, '', 'assets/images/no_image.png', [], '');
+        Book('', '', '', 0, 0, '', 'assets/images/book_default.png', [], '');
 
     book.title = _titleController.text.trim();
     book.author = _authorController.text.trim();
