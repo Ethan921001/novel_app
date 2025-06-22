@@ -6,5 +6,5 @@ final List<Book> books = [
   Book("金瓶梅詞話", "蘭陵笑笑生", "1610/??/??", 200000, 200000,'assets/books/book2','assets/images/book2.jpg',[]),
   Book("三國演義", "羅貫中", "1522/??/??", 250000, 250000,'assets/books/book3','assets/images/book3.jpg',[]),
   Book("西遊記", "吳承恩", "1592/??/??", 0, 0,'assets/books/book4','assets/images/book4.jpg',[]),
-  Book("神論三生", "布丁味的怪君席", "2023/05/15", 0, 0,'assets/books/book5','assets/images/no_image.png',[]),
+  Book("台北人", "	白先勇", "1971/??/??", 0, 0,'assets/books/book5','assets/images/book5.jpg',[]),
 ];
