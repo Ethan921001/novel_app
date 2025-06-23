@@ -57,9 +57,9 @@ List<Character> character9 = [ // 紅樓夢
 ];
 
 List<Character> character10 = [ // 三體
-  Character(name: '葉文潔', description: '天體物理學家，因人生絕望而向外星文明發出訊號'),
-  Character(name: '汪淼', description: '奈米材料科學家，捲入地外文明與地球勢力的衝突'),
-  Character(name: '羅輯', description: '社會學家，成為關鍵的「面壁者」，深具戰略頭腦'),
+  Character(name: '葉文潔', description: '小說<三體>中的角色，天體物理學家，因人生絕望而向外星文明發出訊號'),
+  Character(name: '汪淼', description: '小說<三體>中的角色，奈米材料科學家，捲入地外文明與地球勢力的衝突'),
+  Character(name: '羅輯', description: '小說<三體>中的角色，社會學家，成為關鍵的「面壁者」，深具戰略頭腦'),
 ];
 
 

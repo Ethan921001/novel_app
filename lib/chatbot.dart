@@ -245,7 +245,7 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<ChatMessage> _getAIResponse() async {
     try {
-      const apiKey = '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'; // 替換為你的API密鑰
+      const apiKey = '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'; // 替換為你的API密鑰
       final response = await http.post(
         Uri.parse('https://api.openai.com/v1/chat/completions'),
         headers: {
@@ -255,12 +255,13 @@ class _ChatPageState extends State<ChatPage> {
         body: jsonEncode({
           'model': 'gpt-4-turbo',
           'messages': [
+            ..._memory.getMessagesForApi(),
             {
               'role': 'system',
               'content':
                   '若之前有對話紀錄，請參考之前的對話內容進行回應。'
             },
-            ..._memory.getMessagesForApi(),
+
           ],
           'temperature': 0.7,
           'max_tokens': 500,
@@ -312,11 +313,11 @@ class _ChatPageState extends State<ChatPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start, // 關鍵修改：改為 start 對齊
         mainAxisAlignment:
         message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          if (!message.isUser) // 顯示角色頭像
+          if (!message.isUser)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: CircleAvatar(
@@ -324,35 +325,38 @@ class _ChatPageState extends State<ChatPage> {
                 backgroundImage: AssetImage(widget.avatarAsset),
               ),
             ),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.7,
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: message.isUser
-                    ? Colors.blue[100]
-                    : Colors.grey[300],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    message.isUser ? '你' : widget.characterName,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: message.isUser ? Colors.blue[800] : Colors.grey[800],
-                    ),
+          Flexible( // 使用 Flexible 確保氣泡不會超出屏幕
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: message.isUser
+                        ? Colors.blue[100]
+                        : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 4),
-                  Text(message.content),
-                ],
-              ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        message.isUser ? '你' : widget.characterName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: message.isUser ? Colors.blue[800] : Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(message.content),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          if (message.isUser) // 顯示用戶頭像
+          if (message.isUser)
             Padding(
               padding: const EdgeInsets.only(left: 8),
               child: CircleAvatar(
