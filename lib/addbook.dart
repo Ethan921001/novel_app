@@ -85,8 +85,8 @@ class _AddBookScreenState extends State<AddBookScreen> {
         _titleController.text.trim(),
         _authorController.text.trim(),
         _dateController.text.trim(),
-        int.tryParse(_viewsController.text.trim()) ?? 0,
-        int.tryParse(_favoritesController.text.trim()) ?? 0,
+        0,
+        0,
         content,
         'assets/images/book_default.png',
         characters,
@@ -146,16 +146,6 @@ class _AddBookScreenState extends State<AddBookScreen> {
           TextFormField(
             controller: _dateController,
             decoration: const InputDecoration(labelText: '日期'),
-          ),
-          TextFormField(
-            controller: _viewsController,
-            decoration: const InputDecoration(labelText: '瀏覽次數'),
-            keyboardType: TextInputType.number,
-          ),
-          TextFormField(
-            controller: _favoritesController,
-            decoration: const InputDecoration(labelText: '收藏數'),
-            keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 16),
           ElevatedButton(

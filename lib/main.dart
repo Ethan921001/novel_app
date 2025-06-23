@@ -61,7 +61,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   static const List<BottomNavigationBarItem> _navItems = [
     BottomNavigationBarItem(icon: Icon(Icons.home), label: '首頁'),
-    BottomNavigationBarItem(icon: Icon(Icons.category), label: '分類'),
+    BottomNavigationBarItem(icon: Icon(Icons.category), label: '列表'),
     BottomNavigationBarItem(icon: Icon(Icons.search), label: '搜尋'),
     BottomNavigationBarItem(icon: Icon(Icons.book), label: '書架'),
     BottomNavigationBarItem(icon: Icon(Icons.person), label: '我的'),
@@ -140,7 +140,7 @@ class _BookListScreenState extends State<BookListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("書籍分類")),
+      appBar: AppBar(title: Text("書籍列表")),
       body: Column(
         children: [
           Container(
