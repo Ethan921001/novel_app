@@ -30,6 +30,9 @@ class CharacterSelectionPage extends StatelessWidget {
       body: ListView(
         children: [
           ListTile(
+            leading: CircleAvatar(
+              backgroundImage: AssetImage('assets/avatar/sun_wukong.png'),
+            ),
             title: const Text('孫悟空'),
             subtitle: const Text('西遊記'),
             onTap: () {
@@ -39,21 +42,26 @@ class CharacterSelectionPage extends StatelessWidget {
                   builder: (context) => ChatPage(
                     characterName: '孫悟空',
                     characterDescription: '西遊記角色',
+                    avatarAsset: 'assets/avatar/sun_wukong.png', // 傳遞頭像路徑
                   ),
                 ),
               );
             },
           ),
           ListTile(
-            title: const Text('心理醫生'),
-            subtitle: const Text('會參考之前的談話內容'),
+            leading: CircleAvatar(
+              backgroundImage: AssetImage('assets/avatar/pigsy.png'),
+            ),
+            title: const Text('豬八戒'),
+            subtitle: const Text('西遊記角色'),
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => ChatPage(
-                    characterName: '心理醫生',
-                    characterDescription: '我會參考我們之前的談話來幫助你',
+                    characterName: '豬八戒',
+                    characterDescription: '西遊記角色',
+                    avatarAsset: 'assets/avatar/pigsy.png', // 傳遞頭像路徑
                   ),
                 ),
               );
@@ -68,10 +76,12 @@ class CharacterSelectionPage extends StatelessWidget {
 class ChatPage extends StatefulWidget {
   final String characterName;
   final String characterDescription;
+  final String avatarAsset; // 頭貼路徑
 
   const ChatPage({
     required this.characterName,
     required this.characterDescription,
+    required this.avatarAsset,
     super.key,
   });
 
@@ -242,39 +252,60 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildMessageBubble(ChatMessage message) {
-    // 隱藏系統訊息
     if (message.role == 'system') return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Align(
-        alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.8,
-          ),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: message.isUser
-                ? Colors.blue[100]
-                : Colors.grey[300],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                message.isUser ? '你' : widget.characterName,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: message.isUser ? Colors.blue[800] : Colors.grey[800],
-                ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment:
+        message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (!message.isUser) // 顯示角色頭像
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: CircleAvatar(
+                radius: 20,
+                backgroundImage: AssetImage(widget.avatarAsset),
               ),
-              const SizedBox(height: 4),
-              Text(message.content),
-            ],
+            ),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.7,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: message.isUser
+                    ? Colors.blue[100]
+                    : Colors.grey[300],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message.isUser ? '你' : widget.characterName,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: message.isUser ? Colors.blue[800] : Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(message.content),
+                ],
+              ),
+            ),
           ),
-        ),
+          if (message.isUser) // 顯示用戶頭像
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: CircleAvatar(
+                radius: 20,
+                backgroundImage: AssetImage('assets/images/user_avatar.png'),
+              ),
+            ),
+        ],
       ),
     );
   }

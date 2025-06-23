@@ -15,7 +15,7 @@ class HighlightRange {
 class Character {
   final String name;
   final String description;
-
+  // final String avatarPath;
   Character({required this.name, required this.description});
 }
 
