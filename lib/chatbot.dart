@@ -3,75 +3,130 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-void main() {
-  runApp(const MyApp());
-}
+import 'book.dart';
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// void main() {
+//   runApp(const MyApp());
+// }
+//
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: '有記憶的聊天',
+//       theme: ThemeData(primarySwatch: Colors.blue),
+//       home: const CharacterSelectionPage(),
+//     );
+//   }
+// }
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '有記憶的聊天',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const CharacterSelectionPage(),
-    );
-  }
-}
+// class CharacterSelectionPage extends StatelessWidget {
+//   const CharacterSelectionPage({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(title: const Text('選擇角色')),
+//       body: ListView(
+//         children: [
+//           ListTile(
+//             leading: CircleAvatar(
+//               backgroundImage: AssetImage('assets/avatar/sun_wukong.png'),
+//             ),
+//             title: const Text('孫悟空'),
+//             subtitle: const Text('西遊記'),
+//             onTap: () {
+//               Navigator.push(
+//                 context,
+//                 MaterialPageRoute(
+//                   builder: (context) => ChatPage(
+//                     characterName: '孫悟空',
+//                     characterDescription: '西遊記角色',
+//                     avatarAsset: 'assets/avatar/sun_wukong.png', // 傳遞頭像路徑
+//                   ),
+//                 ),
+//               );
+//             },
+//           ),
+//           ListTile(
+//             leading: CircleAvatar(
+//               backgroundImage: AssetImage('assets/avatar/pigsy.png'),
+//             ),
+//             title: const Text('豬八戒'),
+//             subtitle: const Text('西遊記角色'),
+//             onTap: () {
+//               Navigator.push(
+//                 context,
+//                 MaterialPageRoute(
+//                   builder: (context) => ChatPage(
+//                     characterName: '豬八戒',
+//                     characterDescription: '西遊記角色',
+//                     avatarAsset: 'assets/avatar/pigsy.png', // 傳遞頭像路徑
+//                   ),
+//                 ),
+//               );
+//             },
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
 class CharacterSelectionPage extends StatelessWidget {
-  const CharacterSelectionPage({super.key});
+  final List<Character> characters;
+
+  const CharacterSelectionPage({
+    super.key,
+    required this.characters,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('選擇角色')),
-      body: ListView(
-        children: [
-          ListTile(
+      body: ListView.builder(
+        itemCount: characters.length,
+        itemBuilder: (context, index) {
+          final character = characters[index];
+          return ListTile(
             leading: CircleAvatar(
-              backgroundImage: AssetImage('assets/avatar/sun_wukong.png'),
+              // 這裡可以根據角色名稱顯示不同頭像
+              child: Text(character.name.substring(0, 1)),
             ),
-            title: const Text('孫悟空'),
-            subtitle: const Text('西遊記'),
+            title: Text(character.name),
+            subtitle: Text(character.description),
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => ChatPage(
-                    characterName: '孫悟空',
-                    characterDescription: '西遊記角色',
-                    avatarAsset: 'assets/avatar/sun_wukong.png', // 傳遞頭像路徑
+                    characterName: character.name,
+                    characterDescription: character.description,
+                    avatarAsset: _getCharacterAvatar(character.name),
                   ),
                 ),
               );
             },
-          ),
-          ListTile(
-            leading: CircleAvatar(
-              backgroundImage: AssetImage('assets/avatar/pigsy.png'),
-            ),
-            title: const Text('豬八戒'),
-            subtitle: const Text('西遊記角色'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChatPage(
-                    characterName: '豬八戒',
-                    characterDescription: '西遊記角色',
-                    avatarAsset: 'assets/avatar/pigsy.png', // 傳遞頭像路徑
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
+          );
+        },
       ),
     );
   }
+
+  // 根據角色名稱返回對應的頭像資源路徑
+  String _getCharacterAvatar(String name) {
+    // 這裡可以實現你的頭像映射邏輯
+    // 例如:
+    if (name.contains('孫悟空')) return 'assets/images/sun_wukong.png';
+    if (name.contains('豬八戒')) return 'assets/images/pig.png';
+    // 默認頭像
+    return 'assets/images/default_avatar.png';
+  }
 }
+
 
 class ChatPage extends StatefulWidget {
   final String characterName;

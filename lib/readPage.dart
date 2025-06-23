@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:provider/provider.dart';
+import 'chatbot.dart';
 import 'main.dart'; // 為了取得 themeNotifier
 import 'book.dart';
 import 'tts.dart';
@@ -534,6 +535,30 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                     icon: const Icon(Icons.zoom_out),
                     label: const Text(' 縮小字體 '),
                   ),
+
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      if (widget.book.characters.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("本書暫無角色資料")),
+                        );
+                        return;
+                      }
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CharacterSelectionPage(
+                            characters: widget.book.characters,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.chat),
+                    label: const Text(' 角色對話 '),
+                  ),
+
                 ],
               ),
             ),

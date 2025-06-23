@@ -15,8 +15,26 @@ class HighlightRange {
 class Character {
   final String name;
   final String description;
-  // final String avatarPath;
-  Character({required this.name, required this.description});
+
+  Character({
+    required this.name,
+    required this.description,
+  });
+
+  // 添加 fromJson 和 toJson 方法以支持序列化
+  factory Character.fromJson(Map<String, dynamic> json) {
+    return Character(
+      name: json['name'],
+      description: json['description'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'description': description,
+    };
+  }
 }
 
 class Book {
