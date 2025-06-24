@@ -81,6 +81,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   int chapterCount = 20;
   List<String> chapterTitles = [];
   double _fontSize = 16.0; // 字體大小 state
+  bool useCantonese = false;
 
   @override
   void initState() {
@@ -159,9 +160,11 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
       return '簡介\n這是《${widget.book.title}》的簡介頁。\n\n作者：${widget.book.author}\n發布日期：${widget.book.date}\n共 $chapterCount 章。\n\n右滑以開始閱讀第一章。';
     }
 
-    String path = '${widget.book.content}/chapter$index.txt';
+    // 根據語言選擇檔案名稱
+    String fileName = useCantonese ? 'chapter${index}_ZHH.txt' : 'chapter$index.txt';
+    String path = '${widget.book.content}/$fileName';
+
     try {
-      // 如果有 chapterN.txt，直接讀取
       return await rootBundle.loadString(path);
     } catch (e) {
       // fallback：從 book.content 中擷取章節資料
@@ -187,17 +190,15 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
 
       raw = raw.replaceFirst('#CHAPTER#', '').trim();
 
-      // 分成多行，補上標題（第一行）與內文
       final lines = raw.split('\n').where((l) => l.trim().isNotEmpty).toList();
-
       if (lines.isEmpty) return '第 $index 章\n（本章無內容）';
 
       String title = lines.first.trim();
       String body = lines.sublist(1).join('\n');
-
       return '$title\n$body';
     }
   }
+
 
 
   void _showChapterDialog() {
@@ -538,6 +539,21 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                     icon: const Icon(Icons.zoom_out),
                     label: const Text(' 縮小字體 '),
                   ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        useCantonese = !useCantonese;
+                      });
+                      _pageController.jumpToPage(_pageController.page?.round() ?? 0);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(useCantonese ? '已切換至粵語版' : '已切換至原始版本')),
+                      );
+                    },
+                    icon: const Icon(Icons.translate),
+                    label: Text(useCantonese ? '切換至原文' : '切換至粵語'),
+                  ),
+
 
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
