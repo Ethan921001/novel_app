@@ -52,7 +52,7 @@ dependencies:
   flutter_markdown: ^0.6.15
   intl: ^0.18.1
   image_picker: ^1.1.2
-
+  speech_to_text: ^7.1.0
 
 dev_dependencies:
   flutter_test:

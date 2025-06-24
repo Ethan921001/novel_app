@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:flutter_tts/flutter_tts.dart';
 import 'book.dart';
 
 // void main() {
@@ -160,7 +161,7 @@ class CharacterSelectionPage extends StatelessWidget {
 class ChatPage extends StatefulWidget {
   final String characterName;
   final String characterDescription;
-  final String avatarAsset; // 頭貼路徑
+  final String avatarAsset;
 
   const ChatPage({
     required this.characterName,
@@ -179,23 +180,292 @@ class _ChatPageState extends State<ChatPage> {
   bool _isLoading = false;
   final ScrollController _scrollController = ScrollController();
 
+  late FlutterTts _flutterTts;
+  bool _isPlaying = false;
+  double _speechRate = 0.5;
+  double _volume = 1.0;
+  double _pitch = 1.0;
+  int _currentLanguage = 0;
+  List<String> _languageNames = ['中文', '粵語'];
+  List<String> _languageCodes = ['zh-CN', 'yue-CN'];
+
+  // 語音識別相關變量
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+  String _lastWords = '';
+
   @override
   void initState() {
     super.initState();
+    _initTts();
+    _speech = stt.SpeechToText();
     _sendWelcomeMessage();
+    _initSpeech();
+    // _printAvailableLanguages();
+  }
+
+  Future<void> _initTts() async {
+    _flutterTts = FlutterTts();
+
+    // 檢查支持的語言
+    List<dynamic> languages = await _flutterTts.getLanguages;
+    print("支持的語言: $languages");
+
+    // 設定初始語言
+    await _updateTtsLanguage();
+
+    // 其他參數設定保持不變...
+    await _flutterTts.setSpeechRate(_speechRate);
+    await _flutterTts.setVolume(_volume);
+    await _flutterTts.setPitch(_pitch);
+  }
+
+  Future<void> _updateTtsLanguage() async {
+    String langCode = _languageCodes[_currentLanguage];
+    if (await _flutterTts.isLanguageAvailable(langCode)) {
+      await _flutterTts.setLanguage(langCode);
+      print("設定語言為: ${_languageNames[_currentLanguage]}");
+    } else {
+      print("$langCode 不可用，使用預設語言");
+    }
+  }
+
+  Future<void> _showSpeechSettings() async {
+    // 使用局部變量來保存臨時值
+    double tempRate = _speechRate;
+    double tempVolume = _volume;
+    double tempPitch = _pitch;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(  // 關鍵：使用 StatefulBuilder
+        builder: (context, setState) => AlertDialog(
+          title: Text('語音設定'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('語速: ${tempRate.toStringAsFixed(1)}'),
+                Slider(
+                  value: tempRate,
+                  min: 0.0,
+                  max: 1.0,
+                  divisions: 10,  // 增加分段點
+                  label: tempRate.toStringAsFixed(1),
+                  onChanged: (value) {
+                    setState(() => tempRate = value);  // 使用局部 setState
+                  },
+                ),
+                Text('音量: ${tempVolume.toStringAsFixed(1)}'),
+                Slider(
+                  value: tempVolume,
+                  min: 0.0,
+                  max: 1.0,
+                  divisions: 10,
+                  label: tempVolume.toStringAsFixed(1),
+                  onChanged: (value) {
+                    setState(() => tempVolume = value);
+                  },
+                ),
+                Text('音調: ${tempPitch.toStringAsFixed(1)}'),
+                Slider(
+                  value: tempPitch,
+                  min: 0.5,
+                  max: 2.0,
+                  divisions: 15,  // (2.0 - 0.5) / 0.1 = 15 divisions
+                  label: tempPitch.toStringAsFixed(1),
+                  onChanged: (value) {
+                    setState(() => tempPitch = value);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: Text('取消'),
+              onPressed: () => Navigator.pop(context),
+            ),
+            TextButton(
+              child: Text('確定'),
+              onPressed: () {
+                // 保存設定並更新TTS
+                setState(() {
+                  _speechRate = tempRate;
+                  _volume = tempVolume;
+                  _pitch = tempPitch;
+                });
+                _updateTtsSettings();
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 更新TTS設定的方法
+  Future<void> _updateTtsSettings() async {
+    await _flutterTts.setSpeechRate(_speechRate);
+    await _flutterTts.setVolume(_volume);
+    await _flutterTts.setPitch(_pitch);
+  }
+
+  // 在 _toggleListening 方法中檢查可用的語言
+  void _printAvailableLanguages() async {
+    var locales = await _speech.locales();
+    locales.forEach((locale) => print('支持語言: ${locale.name}, ${locale.localeId}'));
+  }
+  // 初始化語音識別
+  bool _speechAvailable = false;
+  void _initSpeech() async {
+    try {
+      _speechAvailable = await _speech.initialize(
+        onStatus: (status) {
+          print('Speech recognition status: $status');
+          if (status == 'notListening' && _isListening) {
+            setState(() => _isListening = false);
+            if (_lastWords.isNotEmpty) {
+              _messageController.text = _lastWords;
+              _lastWords = '';
+            }
+          }
+        },
+        onError: (error) {
+          print('Speech recognition error: $error');
+          setState(() => _isListening = false);
+        },
+      );
+
+      if (!_speechAvailable) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('无法使用语音识别功能')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Speech initialization error: $e');
+      _speechAvailable = false;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('语音初始化失败: $e')),
+        );
+      }
+    }
+  }
+
+  // 開始/停止語音輸入
+  void _toggleListening() async {
+    if (!_speechAvailable) {
+      print('語音識別不可用'); // 調試用
+      return;
+    }
+
+    if (_isListening) {
+      await _speech.stop();
+      setState(() => _isListening = false);
+      print('停止錄音，最後識別結果: $_lastWords'); // 調試用
+
+      if (_lastWords.isNotEmpty) {
+        _messageController.text = _lastWords;
+        _lastWords = '';
+      }
+    } else {
+      setState(() {
+        _isListening = true;
+        _lastWords = '';
+      });
+
+      print('開始錄音...'); // 調試用
+
+      await _speech.listen(
+        onResult: (result) {
+          print('原始識別結果: ${result.recognizedWords}'); // 調試用
+
+          setState(() {
+            _lastWords = result.recognizedWords;
+            if (result.finalResult) {
+              _messageController.text = _lastWords;
+              _isListening = false;
+              print('最終識別結果: $_lastWords'); // 調試用
+            }
+          });
+        },
+        localeId: 'cmn_CN', // 強制指定中文
+        listenFor: Duration(seconds: 30),
+        cancelOnError: true,
+        partialResults: true, // 啟用實時部分結果
+      );
+    }
+  }
+
+
+  void _switchTTSLanguage() {
+    setState(() {
+      _currentLanguage = (_currentLanguage + 1) % _languageNames.length;
+    });
+    _updateTtsLanguage();
+
+    // 顯示切換提示
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('已切換至 ${_languageNames[_currentLanguage]}'),
+          duration: Duration(seconds: 1),
+        )
+    );
+  }
+  // 切換語言
+  void _switchLanguage(String language) async {
+    if (_isListening) {
+      await _speech.stop();
+    }
+
+    setState(() {
+      _isListening = false;
+      _lastWords = '';
+    });
+
+    // 重新開始聆聽時使用新語言
+    if (language == 'cmn_CN') {
+      // 粵語
+      await _speech.listen(
+        onResult: (result) {
+          setState(() {
+            _lastWords = result.recognizedWords;
+            if (result.finalResult) {
+              _messageController.text = _lastWords;
+              _lastWords = '';
+              _isListening = false;
+            }
+          });
+        },
+        localeId: 'cmn_CN', // 粵語
+        listenFor: const Duration(seconds: 30),
+      );
+    } else {
+      // 普通話
+      await _speech.listen(
+        onResult: (result) {
+          setState(() {
+            _lastWords = result.recognizedWords;
+            if (result.finalResult) {
+              _messageController.text = _lastWords;
+              _lastWords = '';
+              _isListening = false;
+            }
+          });
+        },
+        localeId: 'cmn_CN', // 中文
+        listenFor: const Duration(seconds: 30),
+      );
+    }
+
+    setState(() => _isListening = true);
   }
 
   Future<void> _sendWelcomeMessage() async {
-    // final welcomeMessage = ChatMessage(
-    //   content: '你好！我是${widget.characterName}，${widget.characterDescription}',
-    //   isUser: false,
-    //   timestamp: DateTime.now(),
-    //   role: 'assistant',
-    // );
-    //
-    // setState(() {
-    //   _memory.addMessage(welcomeMessage);
-    // });
     final init_message = "你現在扮演${widget.characterName}，${widget.characterDescription}。請用這個角色的身份和語言風格對話，現在自我介紹。";
     final userMessage = ChatMessage(
       content: init_message,
@@ -274,7 +544,7 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<ChatMessage> _getAIResponse() async {
     try {
-      const apiKey = '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'; // 替換為你的API密鑰
+      const apiKey = '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';
       final response = await http.post(
         Uri.parse('https://api.openai.com/v1/chat/completions'),
         headers: {
@@ -288,9 +558,8 @@ class _ChatPageState extends State<ChatPage> {
             {
               'role': 'system',
               'content':
-                  '若之前有對話紀錄，請參考之前的對話內容進行回應，記得扮演對應角色，並用他的身分及語氣說話。'
+              '若之前有對話紀錄，請參考之前的對話內容進行回應，記得扮演對應角色，並用他的身分及語氣說話。'
             },
-
           ],
           'temperature': 0.7,
           'max_tokens': 500,
@@ -316,7 +585,59 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('與${widget.characterName}對話')),
+      appBar: AppBar(
+        title: Text('與${widget.characterName}對話'),
+        actions: [
+          Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: Center(
+              child: Text(
+                _languageNames[_currentLanguage],
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.language),
+            onPressed: _switchTTSLanguage,
+          ),
+          IconButton(
+            icon: Icon(Icons.settings_voice),
+            onPressed: _showSpeechSettings,
+          ),
+          if (_isListening)
+            IconButton(
+              icon: const Icon(Icons.language),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('選擇語言'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          title: const Text('普通話'),
+                          onTap: () {
+                            _switchLanguage('zh');
+                            Navigator.pop(context);
+                          },
+                        ),
+                        ListTile(
+                          title: const Text('粵語'),
+                          onTap: () {
+                            _switchLanguage('yue');
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
@@ -330,6 +651,22 @@ class _ChatPageState extends State<ChatPage> {
               },
             ),
           ),
+          if (_isListening)
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.blue[50],
+              child: Row(
+                  children: [
+                  const Icon(Icons.mic, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                        _lastWords.isEmpty ? '正在聆聽...' : _lastWords,
+                        style: const TextStyle(fontSize: 16)),
+                  )
+                ],
+              ),
+            ),
           _buildInputArea(),
         ],
       ),
@@ -342,7 +679,7 @@ class _ChatPageState extends State<ChatPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start, // 關鍵修改：改為 start 對齊
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment:
         message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
@@ -354,7 +691,7 @@ class _ChatPageState extends State<ChatPage> {
                 backgroundImage: AssetImage(widget.avatarAsset),
               ),
             ),
-          Flexible( // 使用 Flexible 確保氣泡不會超出屏幕
+          Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -370,12 +707,31 @@ class _ChatPageState extends State<ChatPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        message.isUser ? '你' : widget.characterName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: message.isUser ? Colors.blue[800] : Colors.grey[800],
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              message.isUser ? '你' : widget.characterName,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: message.isUser
+                                    ? Colors.blue[800]
+                                    : Colors.grey[800],
+                              ),
+                            ),
+                          ),
+                          if (!message.isUser) // 只在角色消息顯示語音按鈕
+                            IconButton(
+                              icon: Icon(
+                                _isPlaying && _currentPlayingMessageId == message.id
+                                    ? Icons.stop_circle
+                                    : Icons.play_circle_fill,
+                                color: Colors.blue,
+                              ),
+                              iconSize: 24,
+                              onPressed: () => _toggleSpeech(message),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(message.content),
@@ -398,24 +754,53 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  String? _currentPlayingMessageId;
+
+  Future<void> _toggleSpeech(ChatMessage message) async {
+    if (_isPlaying && _currentPlayingMessageId == message.id) {
+      await _flutterTts.stop();
+      setState(() {
+        _isPlaying = false;
+        _currentPlayingMessageId = null;
+      });
+      return;
+    }
+
+    // 確保使用當前選定的語言
+    await _updateTtsLanguage();
+
+    setState(() {
+      _currentPlayingMessageId = message.id;
+      _isPlaying = true;
+    });
+
+    await _flutterTts.speak(message.content);
+  }
+
   Widget _buildInputArea() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
-        children: [
+          children: [
+          IconButton(
+            icon: Icon(_isListening ? Icons.mic_off : Icons.mic),
+            color: _isListening ? Colors.red : Colors.blue,
+            onPressed: _toggleListening,
+          ),
           Expanded(
             child: TextField(
               controller: _messageController,
-              decoration: InputDecoration(
-                hintText: '輸入訊息...',
-                border: OutlineInputBorder(
+                decoration: InputDecoration(
+                  hintText: '輸入訊息...',
+                  border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
               onSubmitted: (_) => _sendMessage(),
             ),
+
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width:8),
           IconButton(
             icon: _isLoading
                 ? const CircularProgressIndicator()
@@ -423,7 +808,7 @@ class _ChatPageState extends State<ChatPage> {
             onPressed: _sendMessage,
           ),
         ],
-      ),
+        ),
     );
   }
 
@@ -443,6 +828,8 @@ class _ChatPageState extends State<ChatPage> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _speech.stop();
+    _flutterTts.stop();
     super.dispose();
   }
 }
