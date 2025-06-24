@@ -77,9 +77,30 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - assets/avatar/Guan_Yu.png
+    - assets/avatar/Guo_ing.png
+    - assets/avatar/Jia_Baoyu.png
+    - assets/avatar/Lin_Chong.png
+    - assets/avatar/Lin_Daiyu.png
+    - assets/avatar/little_vase.png
+    - assets/avatar/Liu_Bei.png
+    - assets/avatar/Lu_Chih_shen.png
+    - assets/avatar/Luo_Ji.png
+    - assets/avatar/Pan_Jinlian.png
     - assets/avatar/pigsy.png
+    - assets/avatar/Sha_Wujing.png
+    - assets/avatar/Song_Kan.png
     - assets/avatar/sun_wukong.png
+    - assets/avatar/Tang_Monk.png
     - assets/avatar/Tang_Sanzan.png
+    - assets/avatar/Wang_Miao.png
+    - assets/avatar/White_Dragon_Horse.png
+    - assets/avatar/Xiaolongnu.png
+    - assets/avatar/Ximen_Qing.png
+    - assets/avatar/Xue_Baochai.png
+    - assets/avatar/Yang_Guo.png
+    - assets/avatar/Ye_Wenjie.png
+    - assets/avatar/Zhang_Fei.png
     - assets/books/book0/intro.txt
     - assets/books/book1/intro.txt
     - assets/books/book2/intro.txt
