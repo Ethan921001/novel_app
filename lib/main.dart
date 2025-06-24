@@ -7,6 +7,7 @@ import 'account.dart';
 import 'user.dart';
 import 'bookshelf.dart';
 import 'addbook.dart';
+import 'dart:io';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 void main() {
@@ -191,10 +192,17 @@ class _BookListScreenState extends State<BookListScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center, // 垂直置中
                         children: [
-                          Image.asset(
+                          book.image.startsWith('/')
+                              ? Image.file(
+                            File(book.image),
+                            width: 100,
+                            height: 140,
+                            fit: BoxFit.cover,
+                          )
+                              : Image.asset(
                             book.image,
-                            width: 100,   // 放大圖片寬度
-                            height: 140,  // 放大圖片高度，保持比例
+                            width: 100,
+                            height: 140,
                             fit: BoxFit.cover,
                           ),
                           SizedBox(width: 16), // 圖片和文字間距
@@ -281,7 +289,14 @@ class FrontPage extends StatelessWidget {
                     child: Column(
                       children: [
                         // ✅ 圖片寬度等於 Card 寬度（或略小）
-                        Image.asset(
+                        book.image.startsWith('/')
+                            ? Image.file(
+                          File(book.image),
+                          width: cardWidth, // 或 cardWidth * 0.95 讓邊緣留一點空
+                          height: cardWidth * 1.3, // 比例高度可調整
+                          fit: BoxFit.cover,
+                        )
+                            : Image.asset(
                           book.image,
                           width: cardWidth, // 或 cardWidth * 0.95 讓邊緣留一點空
                           height: cardWidth * 1.3, // 比例高度可調整
@@ -374,7 +389,14 @@ class _SearchPageState extends State<SearchPage> {
                   return Card(
                     child: ListTile(
                       title: Text(book.title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      leading: Image.asset(
+                      leading:   book.image.startsWith('/')
+                          ? Image.file(
+                        File(book.image),
+                        width: 50,
+                        height: 70,
+                        fit: BoxFit.cover,
+                      )
+                          : Image.asset(
                         book.image,
                         width: 50,
                         height: 70,
@@ -413,7 +435,15 @@ class BookCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
-        leading: Image.asset('assets/images/book0.jpg', width: 40),
+        leading:   book.image.startsWith('/')
+            ? Image.file(
+          File(book.image),
+          width: 40,
+        )
+            : Image.asset(
+          book.image,
+          width: 40,
+        ),
         title: Text(book.title),
         subtitle: Text(
           "${book.author}\n${book.date}",

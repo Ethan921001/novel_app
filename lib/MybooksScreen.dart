@@ -5,6 +5,7 @@ import 'book.dart';
 import 'book_data.dart';
 import 'user.dart';
 import 'EditBookScreen.dart';
+import 'dart:io';
 
 class MyBooksScreen extends StatelessWidget {
   const MyBooksScreen({super.key});
@@ -28,7 +29,15 @@ class MyBooksScreen extends StatelessWidget {
         itemBuilder: (context, index) {
           final book = myBooks[index];
           return ListTile(
-            leading: Image.asset(book.image, width: 50),
+            leading: book.image.startsWith('/')
+                ? Image.file(
+              File(book.image),
+              width: 50,
+            )
+                : Image.asset(
+              book.image,
+              width: 50,
+            ),
             title: Text(book.title),
             subtitle: Text("作者：${book.author}"),
             trailing: IconButton(
