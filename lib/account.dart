@@ -227,76 +227,87 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
   }
 
   Widget _buildLoggedInUI(BuildContext context, User user) {
-    final avatarBase64 = _userDatabase[user.id]?['avatar'];
-    ImageProvider? avatarImage;
-    if (avatarBase64 != null) {
-      final bytes = base64Decode(avatarBase64);
-      avatarImage = MemoryImage(bytes);
-    }
+    return FutureBuilder(
+      future: _loadUserDatabase(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        GestureDetector(
-          onTap: () async {
-            final picker = ImagePicker();
-            final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-            if (pickedFile != null) {
-              final file = File(pickedFile.path);
-              final bytes = await file.readAsBytes();
-              final newBase64 = base64Encode(bytes);
+        final avatarBase64 = _userDatabase[user.id]?['avatar'];
+        ImageProvider? avatarImage;
+        if (avatarBase64 != null) {
+          final bytes = base64Decode(avatarBase64);
+          avatarImage = MemoryImage(bytes);
+        }
 
-              // 更新資料庫
-              setState(() {
-                _userDatabase[user.id]?['avatar'] = newBase64;
-              });
-              await _saveUserDatabase();
-            }
-          },
-          child: CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.grey[300],
-            backgroundImage: avatarImage,
-            child: avatarImage == null
-                ? const Icon(Icons.camera_alt, size: 40)
-                : null,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          '您好，${user.name}',
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 30),
-        ElevatedButton(
-          onPressed: () => _logout(context),
-          child: const Text('登出'),
-        ),
-        ElevatedButton(
-          onPressed: () => _deleteAccount(context),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          child: const Text('刪除帳號'),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddBookScreen()),
-            );
-          },
-          child: const Text('新增書籍'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MyBooksScreen()),
-            );
-          },
-          child: const Text('我的書籍'),
-        ),
-      ],
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: () async {
+                final picker = ImagePicker();
+                final pickedFile =
+                await picker.pickImage(source: ImageSource.gallery);
+                if (pickedFile != null) {
+                  final file = File(pickedFile.path);
+                  final bytes = await file.readAsBytes();
+                  final newBase64 = base64Encode(bytes);
+
+                  // 更新資料庫
+                  setState(() {
+                    _userDatabase[user.id]?['avatar'] = newBase64;
+                  });
+                  await _saveUserDatabase();
+                }
+              },
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.grey[300],
+                backgroundImage: avatarImage,
+                child: avatarImage == null
+                    ? const Icon(Icons.camera_alt, size: 40)
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              '您好，${user.name}',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () => _logout(context),
+              child: const Text('登出'),
+            ),
+            ElevatedButton(
+              onPressed: () => _deleteAccount(context),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('刪除帳號'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddBookScreen()),
+                );
+              },
+              child: const Text('新增書籍'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MyBooksScreen()),
+                );
+              },
+              child: const Text('我的書籍'),
+            ),
+          ],
+        );
+      },
     );
   }
+
 }

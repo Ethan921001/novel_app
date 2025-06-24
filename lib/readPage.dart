@@ -417,107 +417,115 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      final controller = TextEditingController();
-                      int rating = 3;
+                  onPressed: () {
+                  final controller = TextEditingController();
+                  int rating = 3;
 
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          final existingComments = widget.book.comments;
-                          final avgRating = existingComments.isEmpty
-                              ? 0
-                              : existingComments.map((e) => e['rating'] as int).reduce((a, b) => a + b) / existingComments.length;
+                  showDialog(
+                  context: context,
+                  builder: (context) {
+                  final existingComments = widget.book.comments;
+                  final avgRating = existingComments.isEmpty
+                  ? 0
+                      : existingComments.map((e) => e['rating'] as int).reduce((a, b) => a + b) / existingComments.length;
 
-                          return AlertDialog(
-                            title: Text("《${widget.book.title}》評論區"),
-                            content: SizedBox(
-                              width: double.maxFinite,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (existingComments.isNotEmpty) ...[
-                                    Text("平均評分：${avgRating.toStringAsFixed(1)} / 5.0"),
-                                    const SizedBox(height: 8),
-                                    SizedBox(
-                                      height: 120,
-                                      child: ListView.builder(
-                                        itemCount: existingComments.length,
-                                        itemBuilder: (context, index) {
-                                          final c = existingComments[index];
-                                          return ListTile(
-                                            dense: true,
-                                            title: Text('${c['user']}（${c['rating']} 星）'),
-                                            subtitle: Text(c['comment']),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                    const Divider(),
-                                  ],
-                                  const Text("你的評論"),
-                                  TextField(
-                                    controller: controller,
-                                    decoration: const InputDecoration(hintText: "輸入評論內容"),
-                                    maxLines: 3,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Text("評分："),
-                                      for (int i = 1; i <= 5; i++)
-                                        IconButton(
-                                          icon: Icon(
-                                            i <= rating ? Icons.star : Icons.star_border,
-                                            color: Colors.amber,
-                                          ),
-                                          onPressed: () {
-                                            rating = i;
-                                            (context as Element).markNeedsBuild();
-                                          },
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                  return AlertDialog(
+                  title: Text("《${widget.book.title}》評論區"),
+                  content: SingleChildScrollView(
+                  child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                  maxWidth: 400,
+                  maxHeight: 500,
+                  ),
+                  child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                  if (existingComments.isNotEmpty) ...[
+                  Text("平均評分：${avgRating.toStringAsFixed(1)} / 5.0"),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                  height: 120,
+                  child: ListView.builder(
+                  itemCount: existingComments.length,
+                  itemBuilder: (context, index) {
+                  final c = existingComments[index];
+                  return ListTile(
+                  dense: true,
+                  title: Text('${c['user']}（${c['rating']} 星）'),
+                  subtitle: Text(c['comment']),
+                  );
+                  },
+                  ),
+                  ),
+                  const Divider(),
+                  ],
+                  const Text("你的評論"),
+                  TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(hintText: "輸入評論內容"),
+                  maxLines: 3,
+                  ),
+                  const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (i) {
+                        return GestureDetector(
+                          onTap: () {
+                            rating = i + 1;
+                            (context as Element).markNeedsBuild();
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4), // 控制間距
+                            child: Icon(
+                              i < rating ? Icons.star : Icons.star_border,
+                              color: Colors.amber,
+                              size: 20, // ✅ 調整星星大小（預設為 24）
                             ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text("取消"),
-                              ),
-                              TextButton(
-                                onPressed: () async {
-                                  final user = Provider.of<UserProvider>(context, listen: false).currentUser;
-                                  if (controller.text.trim().isNotEmpty && user != null) {
-                                    setState(() {
-                                      widget.book.comments.add({
-                                        "user": user.name,
-                                        "comment": controller.text.trim(),
-                                        "rating": rating,
-                                      });
-                                    });
-                                    await widget.book.saveComments(); // ✅ 存進 SharedPreferences
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
+                  ),
+                  ),
+                  ),
+                  actions: [
+                  TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("取消"),
+                  ),
+                  TextButton(
+                  onPressed: () async {
+                  final user = Provider.of<UserProvider>(context, listen: false).currentUser;
+                  if (controller.text.trim().isNotEmpty && user != null) {
+                  setState(() {
+                  widget.book.comments.add({
+                  "user": user.name,
+                  "comment": controller.text.trim(),
+                  "rating": rating,
+                  });
+                  });
+                  await widget.book.saveComments(); // ✅ 儲存至 SharedPreferences
 
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text("已新增評論")),
-                                    );
-                                  }else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text("請登入帳號")),
-                                    );
-                                  }
-                                },
-                                child: const Text("送出"),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                    icon: const Icon(Icons.comment),
-                    label: const Text(' 評論 '),
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("已新增評論")),
+                  );
+                  } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("請登入帳號")),
+                  );
+                  }
+                  },
+                  child: const Text("送出"),
+                  ),
+                  ],
+                  );
+                  },
+                  );
+                  },
+                  icon: const Icon(Icons.comment),
+                  label: const Text(' 評論 '),
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton.icon(
@@ -582,6 +590,10 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               ),
             ),
           ),
+          Container(
+            height: 40,
+            color: Theme.of(context).colorScheme.surfaceVariant, // 你想要的顏色
+          )
         ],
       ),
     );
