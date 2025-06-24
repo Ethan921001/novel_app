@@ -221,35 +221,65 @@ class _NovelReaderState extends State<NovelReader> {
   Widget _buildSliders() {
     return Column(
       children: [
-        Slider(
-          value: volume,
-          onChanged: (val) {
-            setState(() => volume = val);
-            flutterTts.setVolume(val);
-          },
-          min: 0.0,
-          max: 1.0,
-          label: "音量: ${volume.toStringAsFixed(1)}",
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: [
+              Text("音量:"),
+              Expanded(
+                child: Slider(
+                  value: volume,
+                  onChanged: (val) {
+                    setState(() => volume = val);
+                    flutterTts.setVolume(val);
+                  },
+                  min: 0.0,
+                  max: 1.0,
+                ),
+              ),
+              Text(volume.toStringAsFixed(1)),
+            ],
+          ),
         ),
-        Slider(
-          value: pitch,
-          onChanged: (val) {
-            setState(() => pitch = val);
-            flutterTts.setPitch(val);
-          },
-          min: 0.5,
-          max: 2.0,
-          label: "音調: ${pitch.toStringAsFixed(1)}",
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: [
+              Text("音調:"),
+              Expanded(
+                child: Slider(
+                  value: pitch,
+                  onChanged: (val) {
+                    setState(() => pitch = val);
+                    flutterTts.setPitch(val);
+                  },
+                  min: 0.5,
+                  max: 2.0,
+                ),
+              ),
+              Text(pitch.toStringAsFixed(1)),
+            ],
+          ),
         ),
-        Slider(
-          value: rate,
-          onChanged: (val) {
-            setState(() => rate = val);
-            flutterTts.setSpeechRate(val);
-          },
-          min: 0.0,
-          max: 1.0,
-          label: "語速: ${rate.toStringAsFixed(1)}",
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: [
+              Text("語速:"),
+              Expanded(
+                child: Slider(
+                  value: rate,
+                  onChanged: (val) {
+                    setState(() => rate = val);
+                    flutterTts.setSpeechRate(val);
+                  },
+                  min: 0.0,
+                  max: 1.0,
+                ),
+              ),
+              Text(rate.toStringAsFixed(1)),
+            ],
+          ),
         ),
       ],
     );

@@ -1,21 +1,21 @@
 import 'book.dart';
 
-List<Character> character1 = [ // 重生之我在成大資工當電神
-  Character(name: '楊過', description: '男主角，性格倔強癲狂，愛恨分明，武功絕頂'),
-  Character(name: '小龍女', description: '女主角，冷若冰霜，出塵脫俗，對楊過情深不悔'),
-  Character(name: '郭靖', description: '楊過義父，為人忠厚正直，是《射鵰英雄傳》主角之一'),
+List<Character> character1 = [ // 神鵰俠侶
+  Character(name: '楊過', description: '神鵰俠侶男主角，性格倔強癲狂，愛恨分明，武功絕頂'),
+  Character(name: '小龍女', description: '神鵰俠侶女主角，冷若冰霜，出塵脫俗，對楊過情深不悔'),
+  Character(name: '郭靖', description: '神鵰俠侶楊過義父，為人忠厚正直，是《射鵰英雄傳》主角之一'),
 ];
 
 List<Character> character2 = [ // 水滸全傳
-  Character(name: '宋江', description: '呼保義，忠義堂首領，智謀過人'),
-  Character(name: '魯智深', description: '花和尚，性格豪爽，力大無窮'),
-  Character(name: '林沖', description: '豹子頭，原為八百里分麾下的教頭，武藝高強'),
+  Character(name: '宋江', description: '出自水滸全傳，呼保義，忠義堂首領，智謀過人'),
+  Character(name: '魯智深', description: '出自水滸全傳，花和尚，性格豪爽，力大無窮'),
+  Character(name: '林沖', description: '出自水滸全傳，豹子頭，原為八百里分麾下的教頭，武藝高強'),
 ];
 
 List<Character> character3 = [ // 金瓶梅詞話
-  Character(name: '西門慶', description: '富商，風流成性，小說主線圍繞其生活展開'),
-  Character(name: '潘金蓮', description: '西門慶的第五房妻，原武大郎之妻，美艷聰明但心機深重'),
-  Character(name: '李瓶兒', description: '西門慶的妾室之一，溫柔嫻靜，命運悲慘'),
+  Character(name: '西門慶', description: '出自金瓶梅，富商，風流成性，小說主線圍繞其生活展開'),
+  Character(name: '潘金蓮', description: '出自金瓶梅，西門慶的第五房妻，原武大郎之妻，美艷聰明但心機深重'),
+  Character(name: '李瓶兒', description: '出自金瓶梅，西門慶的妾室之一，溫柔嫻靜，命運悲慘'),
 ];
 
 List<Character> character4 = [ // 三國演義
@@ -33,33 +33,36 @@ List<Character> character5 = [ // 西遊記
 ];
 
 List<Character> character6 = [ // 台北人
-  Character(name: '鄧麗如', description: '出自〈永遠的尹雪艷〉，上海名媛，情感糾葛複雜'),
-  Character(name: '尹雪艷', description: '永遠的尹雪艷〉女主角，風情萬種但命運多舛'),
-  Character(name: '朱啟銘', description: '出自〈一把青〉，空軍軍官，經歷戰亂與離散'),
+  // Character(name: '鄧麗如', description: '出自〈永遠的尹雪艷〉，上海名媛，情感糾葛複雜'),
+  // Character(name: '尹雪艷', description: '永遠的尹雪艷〉女主角，風情萬種但命運多舛'),
+  // Character(name: '朱啟銘', description: '出自〈一把青〉，空軍軍官，經歷戰亂與離散'),
+  Character(name: 'AI助手', description: '向讀者解答小說<台北人>的相關問題，現在自我介紹')
 ];
 
 List<Character> character7 = [ // 半生緣
-  Character(name: '顧曼楨', description: '溫柔堅毅的女子，與世鈞有一段曲折的愛情'),
-  Character(name: '沈世鈞', description: '出身書香世家，顧曼楨的戀人，卻因家庭與時代所困'),
-  Character(name: '顧曼璐', description: '曼楨的姊姊，為了家庭犧牲自己，命運悲劇'),
+  // Character(name: '顧曼楨', description: '溫柔堅毅的女子，與世鈞有一段曲折的愛情'),
+  // Character(name: '沈世鈞', description: '出身書香世家，顧曼楨的戀人，卻因家庭與時代所困'),
+  // Character(name: '顧曼璐', description: '曼楨的姊姊，為了家庭犧牲自己，命運悲劇'),
+  Character(name: 'AI助手', description: '向讀者解答小說<半生緣>的相關問題，現在自我介紹')
 ];
 
 List<Character> character8 = [ // 將軍族
-  Character(name: '張將軍', description: '主人公，國民黨退役高級軍官，隨政府遷台後日漸落魄'),
-  Character(name: '張太太', description: '張將軍的妻子，曾經風光，如今與丈夫相依為命，堅忍而保守'),
-  Character(name: '年輕軍官（敘述者）', description: '故事的敘述者，對將軍一家帶著同情與觀察，象徵新一代的冷眼旁觀'),
+  // Character(name: '張將軍', description: '主人公，國民黨退役高級軍官，隨政府遷台後日漸落魄'),
+  // Character(name: '張太太', description: '張將軍的妻子，曾經風光，如今與丈夫相依為命，堅忍而保守'),
+  // Character(name: '年輕軍官（敘述者）', description: '故事的敘述者，對將軍一家帶著同情與觀察，象徵新一代的冷眼旁觀'),
+  Character(name: 'AI助手', description: '向讀者解答小說<將軍族>的相關問題，現在自我介紹')
 ];
 
 List<Character> character9 = [ // 紅樓夢
-  Character(name: '賈寶玉', description: '小說男主角，感情細膩，叛逆不羈，與林黛玉情深'),
-  Character(name: '林黛玉', description: '女主角之一，聰慧多才，體弱多病，個性孤傲'),
-  Character(name: '薛寶釵', description: '女主角之一，穩重圓融，容貌端莊，與賈寶玉成婚'),
+  Character(name: '賈寶玉', description: '紅樓夢小說男主角，感情細膩，叛逆不羈，與林黛玉情深'),
+  Character(name: '林黛玉', description: '紅樓夢女主角之一，聰慧多才，體弱多病，個性孤傲'),
+  Character(name: '薛寶釵', description: '紅樓夢女主角之一，穩重圓融，容貌端莊，與賈寶玉成婚'),
 ];
 
 List<Character> character10 = [ // 三體
-  Character(name: '葉文潔', description: '天體物理學家，因人生絕望而向外星文明發出訊號'),
-  Character(name: '汪淼', description: '奈米材料科學家，捲入地外文明與地球勢力的衝突'),
-  Character(name: '羅輯', description: '社會學家，成為關鍵的「面壁者」，深具戰略頭腦'),
+  Character(name: '葉文潔', description: '小說<三體>中的角色，天體物理學家，因人生絕望而向外星文明發出訊號'),
+  Character(name: '汪淼', description: '小說<三體>中的角色，奈米材料科學家，捲入地外文明與地球勢力的衝突'),
+  Character(name: '羅輯', description: '小說<三體>中的角色，社會學家，成為關鍵的「面壁者」，深具戰略頭腦'),
 ];
 
 

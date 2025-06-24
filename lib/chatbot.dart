@@ -93,11 +93,18 @@ class CharacterSelectionPage extends StatelessWidget {
           final character = characters[index];
           return ListTile(
             leading: CircleAvatar(
-              // 這裡可以根據角色名稱顯示不同頭像
-              child: Text(character.name.substring(0, 1)),
+              backgroundImage: AssetImage(_getCharacterAvatar(character.name)),
+              radius: 25, // Slightly larger avatar
             ),
-            title: Text(character.name),
-            subtitle: Text(character.description),
+            title: Text(
+              character.name,
+              style: const TextStyle(fontSize: 18),
+            ),
+            subtitle: Text(
+              character.description,
+              style: const TextStyle(fontSize: 14),
+            ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             onTap: () {
               Navigator.push(
                 context,
@@ -120,8 +127,30 @@ class CharacterSelectionPage extends StatelessWidget {
   String _getCharacterAvatar(String name) {
     // 這裡可以實現你的頭像映射邏輯
     // 例如:
-    if (name.contains('孫悟空')) return 'assets/images/sun_wukong.png';
-    if (name.contains('豬八戒')) return 'assets/images/pig.png';
+    if (name.contains('孫悟空')) return 'assets/avatar/sun_wukong.png';
+    if (name.contains('豬八戒')) return 'assets/avatar/pigsy.png';
+    if (name.contains('沙悟淨')) return 'assets/avatar/Sha_Wujing.png';
+    if (name.contains('唐三藏')) return 'assets/avatar/Tang_Monk.png';
+    if (name.contains('白龍馬')) return 'assets/avatar/White_Dragon_Horse.png';
+    if (name.contains('賈寶玉')) return 'assets/avatar/Jia_Baoyu.png';
+    if (name.contains('林黛玉')) return 'assets/avatar/Lin_Daiyu.png';
+    if (name.contains('薛寶釵')) return 'assets/avatar/Xue_Baochai.png';
+    if (name.contains('葉文潔')) return 'assets/avatar/Ye_Wenjie.png';
+    if (name.contains('汪淼')) return 'assets/avatar/Wang_Miao.png';
+    if (name.contains('羅輯')) return 'assets/avatar/Luo_Ji.png';
+    if (name.contains('楊過')) return 'assets/avatar/Yang_Guo.png';
+    if (name.contains('小龍女')) return 'assets/avatar/Xiaolongnu.png';
+    if (name.contains('郭靖')) return 'assets/avatar/Guo_ing.png';
+    if (name.contains('宋江')) return 'assets/avatar/Song_Kan.png';
+    if (name.contains('魯智深')) return 'assets/avatar/Lu_Chih_shen.png';
+    if (name.contains('林沖')) return 'assets/avatar/Lin_Chong.png';
+    if (name.contains('西門慶')) return 'assets/avatar/Ximen_Qing.png';
+    if (name.contains('潘金蓮')) return 'assets/avatar/Pan_Jinlian.png';
+    if (name.contains('李瓶兒')) return 'assets/avatar/little_vase.png';
+    if (name.contains('劉備')) return 'assets/avatar/Liu_Bei.png';
+    if (name.contains('關羽')) return 'assets/avatar/Guan_Yu.png';
+    if (name.contains('張飛')) return 'assets/avatar/Zhang_Fei.png';
+
     // 默認頭像
     return 'assets/images/default_avatar.png';
   }
@@ -245,7 +274,7 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<ChatMessage> _getAIResponse() async {
     try {
-      const apiKey = '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'; // 替換為你的API密鑰
+      const apiKey = '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'; // 替換為你的API密鑰
       final response = await http.post(
         Uri.parse('https://api.openai.com/v1/chat/completions'),
         headers: {
@@ -255,12 +284,13 @@ class _ChatPageState extends State<ChatPage> {
         body: jsonEncode({
           'model': 'gpt-4-turbo',
           'messages': [
+            ..._memory.getMessagesForApi(),
             {
               'role': 'system',
               'content':
-                  '若之前有對話紀錄，請參考之前的對話內容進行回應。'
+                  '若之前有對話紀錄，請參考之前的對話內容進行回應，記得扮演對應角色，並用他的身分及語氣說話。'
             },
-            ..._memory.getMessagesForApi(),
+
           ],
           'temperature': 0.7,
           'max_tokens': 500,
@@ -312,11 +342,11 @@ class _ChatPageState extends State<ChatPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start, // 關鍵修改：改為 start 對齊
         mainAxisAlignment:
         message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          if (!message.isUser) // 顯示角色頭像
+          if (!message.isUser)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: CircleAvatar(
@@ -324,35 +354,38 @@ class _ChatPageState extends State<ChatPage> {
                 backgroundImage: AssetImage(widget.avatarAsset),
               ),
             ),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.7,
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: message.isUser
-                    ? Colors.blue[100]
-                    : Colors.grey[300],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    message.isUser ? '你' : widget.characterName,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: message.isUser ? Colors.blue[800] : Colors.grey[800],
-                    ),
+          Flexible( // 使用 Flexible 確保氣泡不會超出屏幕
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: message.isUser
+                        ? Colors.blue[100]
+                        : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 4),
-                  Text(message.content),
-                ],
-              ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        message.isUser ? '你' : widget.characterName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: message.isUser ? Colors.blue[800] : Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(message.content),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          if (message.isUser) // 顯示用戶頭像
+          if (message.isUser)
             Padding(
               padding: const EdgeInsets.only(left: 8),
               child: CircleAvatar(
