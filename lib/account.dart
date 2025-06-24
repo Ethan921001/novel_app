@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+
 import 'user.dart';
 import 'addbook.dart';
 import 'MybooksScreen.dart';
@@ -19,11 +22,22 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
   final TextEditingController _nameController = TextEditingController();
 
   Map<String, Map<String, dynamic>> _userDatabase = {};
+  File? _avatarImage;
 
   @override
   void initState() {
     super.initState();
     _loadUserDatabase();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _avatarImage = File(pickedFile.path);
+      });
+    }
   }
 
   Future<void> _loadUserDatabase() async {
@@ -52,14 +66,23 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
       return;
     }
 
+    if (_avatarImage == null) {
+      _showMessage('請選擇頭像');
+      return;
+    }
+
     if (_userDatabase.containsKey(account)) {
       _showMessage('帳號已存在');
       return;
     }
 
+    final bytes = await _avatarImage!.readAsBytes();
+    final avatarBase64 = base64Encode(bytes);
+
     _userDatabase[account] = {
       'password': password,
       'name': name,
+      'avatar': avatarBase64,
       'favorites': [],
       'comments': {},
     };
@@ -69,6 +92,7 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
     _accountController.clear();
     _passwordController.clear();
     _nameController.clear();
+    setState(() => _avatarImage = null);
   }
 
   void _login(BuildContext context) async {
@@ -102,6 +126,7 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
         _accountController.clear();
         _passwordController.clear();
         _nameController.clear();
+        setState(() => _avatarImage = null);
 
         _showMessage('登入成功');
       } else {
@@ -150,46 +175,94 @@ class _LoginRegisterWidgetState extends State<LoginRegisterWidget> {
   Widget _buildLoginForm(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          TextField(
-            controller: _accountController,
-            decoration: const InputDecoration(labelText: '帳號'),
-          ),
-          TextField(
-            controller: _passwordController,
-            decoration: const InputDecoration(labelText: '密碼'),
-            obscureText: true,
-          ),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(labelText: '名字（註冊用）'),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              ElevatedButton(
-                onPressed: _register,
-                child: const Text('註冊新會員'),
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: 60),
+            GestureDetector(
+              onTap: _pickImage,
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.grey[300],
+                backgroundImage:
+                _avatarImage != null ? FileImage(_avatarImage!) : null,
+                child: _avatarImage == null
+                    ? const Icon(Icons.camera_alt, size: 40)
+                    : null,
               ),
-              ElevatedButton(
-                onPressed: () => _login(context),
-                child: const Text('登入'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 80),
-        ],
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _accountController,
+              decoration: const InputDecoration(labelText: '帳號'),
+            ),
+            TextField(
+              controller: _passwordController,
+              decoration: const InputDecoration(labelText: '密碼'),
+              obscureText: true,
+            ),
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: '名字（註冊用）'),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                ElevatedButton(
+                  onPressed: _register,
+                  child: const Text('註冊新會員'),
+                ),
+                ElevatedButton(
+                  onPressed: () => _login(context),
+                  child: const Text('登入'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 80),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildLoggedInUI(BuildContext context, User user) {
+    final avatarBase64 = _userDatabase[user.id]?['avatar'];
+    ImageProvider? avatarImage;
+    if (avatarBase64 != null) {
+      final bytes = base64Decode(avatarBase64);
+      avatarImage = MemoryImage(bytes);
+    }
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        GestureDetector(
+          onTap: () async {
+            final picker = ImagePicker();
+            final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+            if (pickedFile != null) {
+              final file = File(pickedFile.path);
+              final bytes = await file.readAsBytes();
+              final newBase64 = base64Encode(bytes);
+
+              // 更新資料庫
+              setState(() {
+                _userDatabase[user.id]?['avatar'] = newBase64;
+              });
+              await _saveUserDatabase();
+            }
+          },
+          child: CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.grey[300],
+            backgroundImage: avatarImage,
+            child: avatarImage == null
+                ? const Icon(Icons.camera_alt, size: 40)
+                : null,
+          ),
+        ),
+        const SizedBox(height: 20),
         Text(
           '您好，${user.name}',
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),

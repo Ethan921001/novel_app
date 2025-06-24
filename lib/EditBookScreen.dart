@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'book.dart';
 import 'book_data.dart';
 
 class BookFormScreen extends StatefulWidget {
-  final Book? book; // 若為 null 則為新增，否則為編輯
+  final Book? book;
 
   const BookFormScreen({super.key, this.book});
 
@@ -29,6 +31,18 @@ class _BookFormScreenState extends State<BookFormScreen> {
   List<TextEditingController> _chapterTitleControllers = [];
   List<TextEditingController> _chapterContentControllers = [];
 
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -41,12 +55,8 @@ class _BookFormScreenState extends State<BookFormScreen> {
       _favoritesController.text = book.favorites.toString();
 
       characterCount = book.characters.length;
-      _characterNameControllers = book.characters
-          .map((c) => TextEditingController(text: c.name))
-          .toList();
-      _characterDescControllers = book.characters
-          .map((c) => TextEditingController(text: c.description))
-          .toList();
+      _characterNameControllers = book.characters.map((c) => TextEditingController(text: c.name)).toList();
+      _characterDescControllers = book.characters.map((c) => TextEditingController(text: c.description)).toList();
 
       final contentLines = book.content.split('\n');
       final introLines = <String>[];
@@ -83,20 +93,18 @@ class _BookFormScreenState extends State<BookFormScreen> {
       }
 
       _introController.text = introLines.join('\n').trim();
-      _chapterTitleControllers = chapterTitles
-          .map((title) => TextEditingController(text: title))
-          .toList();
-      _chapterContentControllers = chapterBodies
-          .map((body) => TextEditingController(text: body))
-          .toList();
+      _chapterTitleControllers = chapterTitles.map((title) => TextEditingController(text: title)).toList();
+      _chapterContentControllers = chapterBodies.map((body) => TextEditingController(text: body)).toList();
+
+      if (book.image.startsWith('/')) {
+        _selectedImage = File(book.image);
+      }
     }
   }
 
   void _prepareCharacters() {
-    _characterNameControllers =
-        List.generate(characterCount, (_) => TextEditingController());
-    _characterDescControllers =
-        List.generate(characterCount, (_) => TextEditingController());
+    _characterNameControllers = List.generate(characterCount, (_) => TextEditingController());
+    _characterDescControllers = List.generate(characterCount, (_) => TextEditingController());
   }
 
   void _addChapter() {
@@ -114,13 +122,6 @@ class _BookFormScreenState extends State<BookFormScreen> {
   }
 
   void _saveOrUpdateBook() {
-    // if (!(_formKey.currentState?.validate() ?? false)) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text("請確認書名是否填寫")),
-    //   );
-    //   return;
-    // }
-
     String content = '#INTRO#\n${_introController.text.trim()}\n';
     for (int i = 0; i < _chapterTitleControllers.length; i++) {
       final title = _chapterTitleControllers[i].text.trim();
@@ -138,8 +139,7 @@ class _BookFormScreenState extends State<BookFormScreen> {
     }
 
     final isEdit = widget.book != null;
-    final book = widget.book ??
-        Book('', '', '', 0, 0, '', 'assets/images/book_default.png', [], '');
+    final book = widget.book ?? Book('', '', '', 0, 0, '', 'assets/images/book_default.png', [], '');
 
     book.title = _titleController.text.trim();
     book.author = _authorController.text.trim();
@@ -148,6 +148,7 @@ class _BookFormScreenState extends State<BookFormScreen> {
     book.favorites = int.tryParse(_favoritesController.text.trim()) ?? 0;
     book.content = content;
     book.characters = characters;
+    book.image = _selectedImage?.path ?? book.image;
 
     if (!isEdit) {
       books.add(book);
@@ -171,23 +172,6 @@ class _BookFormScreenState extends State<BookFormScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isEdit = widget.book != null;
-
-    return Scaffold(
-      appBar: AppBar(title: Text(isEdit ? '編輯書籍' : '新增書籍')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: step == 1
-            ? _buildStep1()
-            : step == 2
-            ? _buildStep2()
-            : _buildStep3(),
-      ),
-    );
-  }
-
   Widget _buildStep1() {
     return Form(
       key: _formKey,
@@ -206,20 +190,25 @@ class _BookFormScreenState extends State<BookFormScreen> {
             controller: _dateController,
             decoration: const InputDecoration(labelText: '日期'),
           ),
-          TextFormField(
-            controller: _viewsController,
-            decoration: const InputDecoration(labelText: '瀏覽次數'),
-            keyboardType: TextInputType.number,
+          const SizedBox(height: 16),
+          const Text('封面圖片', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Center(
+            child: _selectedImage == null
+                ? const Text('尚未選擇圖片')
+                : Image.file(_selectedImage!, height: 150),
           ),
-          TextFormField(
-            controller: _favoritesController,
-            decoration: const InputDecoration(labelText: '收藏數'),
-            keyboardType: TextInputType.number,
+          TextButton.icon(
+            icon: const Icon(Icons.photo),
+            label: const Text('從相簿選擇圖片'),
+            onPressed: _pickImage,
           ),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              setState(() => step = 2);
+              if (_formKey.currentState?.validate() ?? false) {
+                setState(() => step = 2);
+              }
             },
             child: const Text('下一步：輸入角色'),
           ),
@@ -246,15 +235,11 @@ class _BookFormScreenState extends State<BookFormScreen> {
         const SizedBox(height: 8),
         for (int i = 0; i < characterCount; i++) ...[
           TextFormField(
-            controller: i < _characterNameControllers.length
-                ? _characterNameControllers[i]
-                : TextEditingController(),
+            controller: i < _characterNameControllers.length ? _characterNameControllers[i] : TextEditingController(),
             decoration: InputDecoration(labelText: '角色 ${i + 1} 名字'),
           ),
           TextFormField(
-            controller: i < _characterDescControllers.length
-                ? _characterDescControllers[i]
-                : TextEditingController(),
+            controller: i < _characterDescControllers.length ? _characterDescControllers[i] : TextEditingController(),
             decoration: InputDecoration(labelText: '角色 ${i + 1} 描述'),
           ),
           const Divider(),
@@ -276,8 +261,7 @@ class _BookFormScreenState extends State<BookFormScreen> {
           maxLines: 3,
         ),
         const SizedBox(height: 16),
-        const Text('章節內容',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const Text('章節內容', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         for (int i = 0; i < _chapterTitleControllers.length; i++) ...[
           TextFormField(
@@ -310,6 +294,23 @@ class _BookFormScreenState extends State<BookFormScreen> {
           child: const Text('完成'),
         ),
       ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEdit = widget.book != null;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(isEdit ? '編輯書籍' : '新增書籍')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: step == 1
+            ? _buildStep1()
+            : step == 2
+            ? _buildStep2()
+            : _buildStep3(),
+      ),
     );
   }
 }

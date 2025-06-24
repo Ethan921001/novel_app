@@ -4,6 +4,7 @@ import 'user.dart'; // 包含 User 與 UserProvider
 import 'readPage.dart';
 import 'book_data.dart';
 import 'book.dart';
+import 'dart:io';
 
 class UserBookshelfWidget extends StatelessWidget {
   const UserBookshelfWidget({super.key});
@@ -64,10 +65,17 @@ class UserBookshelfWidget extends StatelessWidget {
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
                         children: [
-                          Image.asset(
+                          book.image.startsWith('/')
+                              ? Image.file(
+                            File(book.image),
+                            width: cardWidth, // 或 cardWidth * 0.95 讓邊緣留一點空
+                            height: cardWidth * 1.3, // 比例高度可調整
+                            fit: BoxFit.cover,
+                          )
+                              : Image.asset(
                             book.image,
-                            width: cardWidth,
-                            height: cardWidth * 1.3,
+                            width: cardWidth, // 或 cardWidth * 0.95 讓邊緣留一點空
+                            height: cardWidth * 1.3, // 比例高度可調整
                             fit: BoxFit.cover,
                           ),
                           const SizedBox(height: 8),

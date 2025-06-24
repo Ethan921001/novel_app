@@ -6,6 +6,7 @@ import 'main.dart'; // 為了取得 themeNotifier
 import 'book.dart';
 import 'tts.dart';
 import 'user.dart'; // 新增：取得使用者資訊
+import 'dart:io';
 
 class BookDetailScreen extends StatefulWidget {
   final Book book;
@@ -286,7 +287,9 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Center(
-                          child: Image.asset(widget.book.image, height: 200),
+                          child: widget.book.image.startsWith('/data') || widget.book.image.startsWith('/storage')
+                              ? Image.file(File(widget.book.image), height: 200, fit: BoxFit.cover)
+                              : Image.asset(widget.book.image, height: 200, fit: BoxFit.cover),
                         ),
                         const SizedBox(height: 16),
                         Text("書名: ${widget.book.title}",
