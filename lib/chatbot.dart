@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -188,6 +190,8 @@ class _ChatPageState extends State<ChatPage> {
   int _currentLanguage = 0;
   List<String> _languageNames = ['中文', '粵語'];
   List<String> _languageCodes = ['zh-CN', 'yue-CN'];
+  int _currentVoiceType = 0; // 0: 女聲, 1: 男聲
+  List<String> _voiceTypes = ['女聲', '男聲'];
 
   // 語音識別相關變量
   late stt.SpeechToText _speech;
@@ -205,79 +209,108 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _initTts() async {
-    _flutterTts = FlutterTts();
+      _flutterTts = FlutterTts();
 
-    // 檢查支持的語言
-    List<dynamic> languages = await _flutterTts.getLanguages;
-    print("支持的語言: $languages");
 
-    // 設定初始語言
-    await _updateTtsLanguage();
+      List<dynamic> voices = await _flutterTts.getVoices;
+      print("可用語音: $voices");
 
-    // 其他參數設定保持不變...
-    await _flutterTts.setSpeechRate(_speechRate);
-    await _flutterTts.setVolume(_volume);
-    await _flutterTts.setPitch(_pitch);
+      // 檢查支持的語言
+      List<dynamic> languages = await _flutterTts.getLanguages;
+      print("支持的語言: $languages");
+
+      // 設定初始語言
+      await _updateTtsLanguage();
+      await _updateVoice();
+
+      // 其他參數設定保持不變...
+      await _flutterTts.setSpeechRate(_speechRate);
+      await _flutterTts.setVolume(_volume);
+      await _flutterTts.setPitch(_pitch);
+    }
+
+    Future<void> _updateTtsLanguage() async {
+      String langCode = _languageCodes[_currentLanguage];
+      if (await _flutterTts.isLanguageAvailable(langCode)) {
+        await _flutterTts.setLanguage(langCode);
+        print("設定語言為: ${_languageNames[_currentLanguage]}");
+      } else {
+        print("$langCode 不可用，使用預設語言");
+    }
   }
 
-  Future<void> _updateTtsLanguage() async {
+  Future<void> _updateVoice() async {
     String langCode = _languageCodes[_currentLanguage];
-    if (await _flutterTts.isLanguageAvailable(langCode)) {
-      await _flutterTts.setLanguage(langCode);
-      print("設定語言為: ${_languageNames[_currentLanguage]}");
+
+    // 根據語言和性別選擇最佳語音
+    List<dynamic> voices = await _flutterTts.getVoices;
+
+    // 過濾符合條件的語音
+    // var suitableVoices = voices.where((voice) {
+    //   return voice['locale'].contains(langCode) &&
+    //       ((_currentVoiceType == 0 && voice['name'].toString().contains('female')) ||
+    //           (_currentVoiceType == 1 && voice['name'].toString().contains('male')));
+    //       }).toList();
+    var suitableVoices = voices.toList();
+
+    if (suitableVoices.isNotEmpty) {
+      await _flutterTts.setVoice({"name": suitableVoices.first['name'], "locale": langCode});
+      print("設定語音為: ${suitableVoices.first}");
     } else {
-      print("$langCode 不可用，使用預設語言");
+      print("找不到匹配語音，使用預設");
+      await _flutterTts.setLanguage(langCode);
     }
   }
 
   Future<void> _showSpeechSettings() async {
-    // 使用局部變量來保存臨時值
     double tempRate = _speechRate;
     double tempVolume = _volume;
     double tempPitch = _pitch;
+    int tempVoiceType = _currentVoiceType;
 
     await showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(  // 關鍵：使用 StatefulBuilder
+      builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: Text('語音設定'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // 語言選擇
+                ListTile(
+                  title: Text('當前語言'),
+                  trailing: Text(_languageNames[_currentLanguage]),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _switchTTSLanguage();
+                  },
+                ),
+
+                // 性別選擇
+                ListTile(
+                  title: Text('聲音類型'),
+                  trailing: Text(_voiceTypes[tempVoiceType]),
+                  onTap: () {
+                    setState(() {
+                      tempVoiceType = (tempVoiceType + 1) % _voiceTypes.length;
+                    });
+                  },
+                ),
+
+                Divider(),
+
+                // 其他滑桿設定...
                 Text('語速: ${tempRate.toStringAsFixed(1)}'),
                 Slider(
                   value: tempRate,
                   min: 0.0,
                   max: 1.0,
-                  divisions: 10,  // 增加分段點
-                  label: tempRate.toStringAsFixed(1),
-                  onChanged: (value) {
-                    setState(() => tempRate = value);  // 使用局部 setState
-                  },
-                ),
-                Text('音量: ${tempVolume.toStringAsFixed(1)}'),
-                Slider(
-                  value: tempVolume,
-                  min: 0.0,
-                  max: 1.0,
                   divisions: 10,
-                  label: tempVolume.toStringAsFixed(1),
-                  onChanged: (value) {
-                    setState(() => tempVolume = value);
-                  },
+                  onChanged: (value) => setState(() => tempRate = value),
                 ),
-                Text('音調: ${tempPitch.toStringAsFixed(1)}'),
-                Slider(
-                  value: tempPitch,
-                  min: 0.5,
-                  max: 2.0,
-                  divisions: 15,  // (2.0 - 0.5) / 0.1 = 15 divisions
-                  label: tempPitch.toStringAsFixed(1),
-                  onChanged: (value) {
-                    setState(() => tempPitch = value);
-                  },
-                ),
+
+                // 其他設定項...
               ],
             ),
           ),
@@ -289,13 +322,13 @@ class _ChatPageState extends State<ChatPage> {
             TextButton(
               child: Text('確定'),
               onPressed: () {
-                // 保存設定並更新TTS
                 setState(() {
                   _speechRate = tempRate;
                   _volume = tempVolume;
                   _pitch = tempPitch;
+                  _currentVoiceType = tempVoiceType;
                 });
-                _updateTtsSettings();
+                _updateVoice(); // 更新語音設定
                 Navigator.pop(context);
               },
             ),
@@ -307,11 +340,33 @@ class _ChatPageState extends State<ChatPage> {
 
   // 更新TTS設定的方法
   Future<void> _updateTtsSettings() async {
-    await _flutterTts.setSpeechRate(_speechRate);
-    await _flutterTts.setVolume(_volume);
-    await _flutterTts.setPitch(_pitch);
+    try {
+      // 基本設定
+      await _flutterTts.setSpeechRate(_speechRate);
+      await _flutterTts.setVolume(_volume);
+      await _flutterTts.setPitch(_pitch);
+
+      // 平台特定設定
+      if (Platform.isAndroid) {
+        await _setAndroidVoice();
+      // } else if (Platform.isIOS) {
+      //   await _setIOSVoice();
+      }
+
+      // 通用語音更新
+      await _updateVoice();
+    } catch (e) {
+      print("更新語音設定失敗: $e");
+    }
   }
 
+  Future<void> _setAndroidVoice() async {
+    // if (Platform.isAndroid) {
+      // 嘗試設定特定男聲引擎
+      await _flutterTts.setEngine("com.google.android.tts");
+      await _flutterTts.setVoice({"name": "zh-cn-x-mai-male", "locale": "zh-CN"});
+    // }
+  }
   // 在 _toggleListening 方法中檢查可用的語言
   void _printAvailableLanguages() async {
     var locales = await _speech.locales();
@@ -544,7 +599,7 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<ChatMessage> _getAIResponse() async {
     try {
-      const apiKey = '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';
+      const apiKey = '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';
       final response = await http.post(
         Uri.parse('https://api.openai.com/v1/chat/completions'),
         headers: {
